@@ -53,11 +53,12 @@ for(run in 1:numSp) {
   if(!dir.exists(dirname[[run]])) dir.create(dirname[[run]])
   dat[[run]]<-obsdat %>%
     rename(Catch=!!obsCatch[run])%>%
-    filter(!is.na(Catch) & !is.na(Effort))   %>%
+    dplyr::select_at(all_of(c(allVarNames,"stratum","Effort","Catch"))) %>%
+    drop_na()   %>%
     mutate(cpue=Catch/Effort,
            log.cpue=log(Catch/Effort),
-           pres=ifelse(cpue>0,1,0)) %>%
-    dplyr::select_at(all_of(c(allVarNames,"stratum","Effort","Catch","cpue","log.cpue","pres"))) 
+           pres=ifelse(cpue>0,1,0)) 
+  if(dim(dat[[run]])[1]<dim(obsdat)[1]) print(paste0("Removed ",dim(obsdat)[1]-dim(dat[[run]])[1]," rows with NA values for ",common[run]))
   yearSum[[run]]<-dat[[run]] %>% group_by(Year) %>%
     summarize(ObsCat=sum(Catch,na.rm=TRUE),
               ObsEff=sum(Effort,na.rm=TRUE),

@@ -49,12 +49,10 @@ summary(obsll)
 # Print species summaries, and select a subset of species to analyze 
 spSummary<-obsll %>% group_by(COMMON,SCIENTIFIC) %>% 
   summarize(Kept.kg=sum(whole_kg[FATE=="KEPT" | FATE=="KEPT AS BAIT"],na.rm=TRUE),
-            Kept.number=length(whole_kg[(FATE=="KEPT"| FATE=="KEPT AS BAIT" )& 
-                !is.na(SCIENTIFIC)]),
+            Kept.number=length(whole_kg[(FATE=="KEPT"| FATE=="KEPT AS BAIT" )& !is.na(SCIENTIFIC)]),
             Dalive.kg=sum(whole_kg[FATE=="RELEASED ALIVE"],na.rm=TRUE),
             Dalive.number=length(whole_kg[FATE=="RELEASED ALIVE" & !is.na(SCIENTIFIC)]),
-            Ddead.kg=sum(whole_kg[FATE=="RELEASED DEAD" | FATE=="RELEASED UNKNOWN"],
-              na.rm=TRUE),
+            Ddead.kg=sum(whole_kg[FATE=="RELEASED DEAD" | FATE=="RELEASED UNKNOWN"], na.rm=TRUE),
             Ddead.number=length(whole_kg[(FATE=="RELEASED DEAD" | FATE=="RELEASED UNKNOWN" )& !is.na(SCIENTIFIC)]),
             discard.num.all=length(whole_kg[is.na(whole_kg) & DISPOSITION=="DISCARD"]),
             kept.num.all=length(whole_kg[is.na(whole_kg) & DISPOSITION=="KEPT"])) 
@@ -95,7 +93,7 @@ logtripll <- logll %>%
            depth=ifelse(!is.na(depth),depth,median(depth,na.rm=TRUE))) %>%
    mutate(season=ifelse(month<=6,1,2),EW=ifelse(area>=11,"W","E"),trips=1)
 #Note: This version defines 2 seasons, and EW as the area strata
-#consistent with the turtle bycatch estimates. Edit if necesary
+#consistent with the turtle bycatch estimates. Edit if necessary
 summary(logtripll)
 
 
@@ -129,6 +127,7 @@ if(catchtype=="all.num") {
     summarize(catch=length(whole_kg)) 
 }
 
+# Add species catch
 catch<-catch %>% pivot_wider(names_from = SpeciesSelect,values_from = catch)
 catch[is.na(catch)]<-0
 names(catch)[-1] <-paste0("catch.",names(catch)[-1])

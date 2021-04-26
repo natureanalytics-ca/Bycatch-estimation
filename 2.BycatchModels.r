@@ -83,7 +83,7 @@ for(run in 1:numSp) {
   binpredvals<-makePredictionsVar(bin1,modType="Binomial",newdat=logdat,printOutput=TRUE)   
   plotFits(binpredvals,"Binomial",paste0(outVal,"FitBinomial.pdf"))
   residualTab[[run]][,"Binomial"]<-ResidualsFunc(bin1,"Binomial",paste0(outVal,"ResidualsBinomial.pdf"))
-  if(residualTab[[run]]["KS.p","Binomial"]<0.05) modelFail[run,"Binomial"]<-"resid"
+  if(residualTab[[run]]["KS.p","Binomial"]<0.01 & ResidualTest) modelFail[run,"Binomial"]<-"resid"
   if(is.null(binpredvals)) modelFail[run,"Binomial"]<-"cv"
   modelTable[[run]]$formula[1]<-paste(formula(bin1))[[3]]
   } else  {
@@ -108,7 +108,7 @@ for(run in 1:numSp) {
          predvals[[modelTry[mod]]]<-makePredictionsVar(modfit1=bin1,modfit2=modfits[[modelTry[mod]]],modType=modelTry[mod],newdat=logdat,printOutput=TRUE)   
          plotFits(predvals[[modelTry[mod]]],modelTry[mod],paste0(outVal,"Fit",modelTry[mod],".pdf"))
          residualTab[[run]][,modelTry[mod]]<-ResidualsFunc(modfits[[modelTry[mod]]],modelTry[mod],paste0(outVal,"Residuals",modelTry[mod],".pdf"))
-         if(residualTab[[run]]["KS.p",modelTry[mod]]<0.05) modelFail[run,modelTry[mod]]<-"resid"
+         if(residualTab[[run]]["KS.p",modelTry[mod]]<0.01 & ResidualTest) modelFail[run,modelTry[mod]]<-"resid"
          if(is.null(predvals[[modelTry[mod]]])) modelFail[run,modelTry[mod]]<-"cv"
          modelTable[[run]]$formula[mod+1]<-paste(formula(modfits[[modelTry[mod]]]))[[3]]
        } else {
@@ -131,7 +131,7 @@ for(run in 1:numSp) {
      temp<-ResidualsFunc(modfits[[modelTry[mod]]],modelTry[mod],paste0(outVal,"Residuals",modelTry[mod],".pdf"))
      if(!is.null(temp)) {
        residualTab[[run]][,modelTry[mod]]<-temp
-       if(residualTab[[run]]["KS.p",modelTry[mod]]<0.05) modelFail[run,modelTry[mod]]<-"resid"
+       if(residualTab[[run]]["KS.p",modelTry[mod]]<0.01 & ResidualTest) modelFail[run,modelTry[mod]]<-"resid"
      }
      if(is.null(predvals[[modelTry[mod]]])) modelFail[run,modelTry[mod]]<-"cv"
    } else {
@@ -142,6 +142,7 @@ for(run in 1:numSp) {
   yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=CatEst,Total.se=Catse) %>%
     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,TotalFixed=Total)
   allmods[[run]]<-bind_rows(c(predvals,list(Ratio=yearsumgraph)),.id="Source") 
+  allmods[[run]]$Valid<-ifelse(modelFail[run,match(allmods[[run]]$Source,dimnames(modelFail)[[2]])]=="-" | yearpred$Source=="Ratio",1,0)
   plotFits(allmods[[run]],modType="All",paste0(outVal,"AllFit.pdf"))
   #Show the diagnostic table
   printTableFunc("Diagnostics",sp[run],residualTab[[run]],paste0(outVal,"residualDiagnostics.pdf"),useRowNames = TRUE)

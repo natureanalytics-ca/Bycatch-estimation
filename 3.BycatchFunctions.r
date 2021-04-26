@@ -112,6 +112,11 @@ mostfreqfunc=function(x) {
   temp
 }
 
+# Function to find range of a numerical variable
+getRange<-function(x) {
+  max(x,na.rm=TRUE)-min(x,na.rm=TRUE)
+}
+
 ## Function to convert new areas to old areas from Kevin McCarthy
 areaGOM=function(x) {
   x[x>=2383& x<= 2384]=2
@@ -531,10 +536,12 @@ ResidualsFunc<-function(modfit1,modType,fileName,nsim=250) {
 }
 
 #Function to plot total catch by all models plus a validation number 
-plotFitsValidate<-function(yearpred,trueval,fileName) {
+plotFitsValidate<-function(yearpred,trueval,fileName,colName) {
   yearpred<-yearpred %>% mutate(ymin=Total-1.96*Total.se,ymax=Total+1.96*Total.se)%>%
-    mutate(ymin=ifelse(ymin>0,ymin,0),Source=bestmod[run])
-  trueval<-trueval %>% mutate(ymin=rep(NA,dim(trueval)[1]),ymax=rep(NA,dim(trueval)[1]),
+    mutate(ymin=ifelse(ymin>0,ymin,0)) %>%
+    dplyr::filter(Valid==1)
+  trueval<-trueval %>% rename(Total=!!colName) %>%
+    mutate(ymin=rep(NA,dim(trueval)[1]),ymax=rep(NA,dim(trueval)[1]),
                   Source=rep("Validation",dim(trueval)[1]))
   yearpred<-rbind(yearpred[,c("Year","Total","ymin","ymax","Source")],trueval[,c("Year","Total","ymin","ymax","Source")])
   g<-ggplot(yearpred,aes(x=Year,y=Total,ymin=ymin,ymax=ymax,color=Source,fill=Source))+
