@@ -766,7 +766,7 @@ getME<-function(yhat,y) {
     me
 }
 
-#Function to fit a specified model formula
+#Function to fit a specified model formula and print outputs
 FitModelFunc<-function(formula1,formula2,modType,obsdatval,outputDir) {
   modfit2=NULL
   formula3=update(formula2,~.+offset(log(Effort)))  
@@ -814,6 +814,43 @@ FitModelFunc<-function(formula1,formula2,modType,obsdatval,outputDir) {
     }
     }
   list(modfit1=modfit1,modfit2=modfit2)
+}
+
+#Function to fit a specified model formula and print outputs for Cross validation
+FitModelFuncCV<-function(formula1,modType,obsdatval) {
+  if(modType %in% c("Binomial") )  {  
+    obsdatval$y=obsdatval$pres
+    modfit1<-try(glm(formula1,data=obsdatval,family="binomial",control=list(epsilon = 1e-6,maxit=1000)))
+  }
+  if(modType=="Lognormal") {
+    obsdatval$y=obsdatval$log.cpue
+    obsdatval=obsdatval[obsdatval$cpue>0,]
+    modfit1=try(lm(formula1,data=obsdatval))
+  }
+  if(modType=="Gamma") {
+    obsdatval$y=obsdatval$cpue
+    obsdatval=obsdatval[obsdatval$cpue>0,]
+    modfit1=try(glm(formula1,data=obsdatval,family="Gamma"))
+  }
+  if(modType=="NegBin") {
+    obsdatval$y=round(obsdatval$Catch)
+    modfit1=try(glm.nb(formula1,data=obsdatval,control=glm.control(epsilon=1E-6,maxit=45),na.action=na.fail))
+  }
+  if(modType=="Tweedie") {
+    obsdatval$y=obsdatval$cpue
+    modfit1=try(cpglm(formula1,data=obsdatval))
+  }
+  if(modType %in% c("TMBnbinom1","TMBnbinom2") ){
+    obsdatval$y=round(obsdatval$Catch)
+    TMBfamily=gsub("TMB","",modType)
+    modfit1=try(glmmTMB(formula1,family=TMBfamily,data=obsdatval))
+  }
+  if(modType =="TMBtweedie"){
+    TMBfamily=gsub("TMB","",modType)
+    modfit1=try(glmmTMB(formula1,family=TMBfamily,data=obsdatval))
+  }
+  if(class(modfit1)[1]=="try-error") modfit1=NULL
+  modfit1
 }
 
 

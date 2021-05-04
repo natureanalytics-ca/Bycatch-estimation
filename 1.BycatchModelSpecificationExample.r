@@ -79,8 +79,11 @@ modelTry<-c("Lognormal","Gamma","NegBin","Tweedie","TMBnbinom1","TMBnbinom2","TM
 selectCriteria<-"BIC"
 
 #Specify whether to run a 10 fold cross-validation (TRUE or FALSE). This may not work with a small 
-#or unbalanced dataset.
+#or unbalanced dataset. DredgeCrossValidation specifies whether to use information criteria 
+#to find the best model in cross validation, using the dredge function, or just keep the same model formula. 
+#Do not use dredge for very large datasets, as the run will be slow.  
 DoCrossValidation<-TRUE
+DredgeCrossValidation<-FALSE
 
 #Specify whether to exclude models that fail the DHARMa residuals test. 
 ResidualTest<-FALSE

@@ -112,7 +112,9 @@ indexModel<-formula(y~Year+area)
 factorNames=c("Year","season")
 ```
 
-Finally, specify which models to try and which information criterion to use in narrowing down the predictor variables to use in each observation error model group. Model selection is done with dredge function in the MuMIn library(@MuMIn). Also, specify whether to do cross-validation to choose between observation error models, and whether to save the R workspace after the models run. Note that the tweedie outputs should be the same whether using TMB (TweedieTMB) or the cpglm function (Tweedie). The negative binomial 2 in TMB is the same as the classic negative binomial in glm.nb. To get faster results, use TMB only for these distributions. They are both included for comparison in the example. The variable ResidualsTest allows excluding from cross-validation any model where the residuals have a P<0.01 for a Kolmogorov Smirnov test of whether the residuals are distributed as expected under the likelihood (testUniformity in DHARMa). This is useful for excluding poorly perfoming models. However, it may be too restrictive if none of the models perform well. 
+Finally, specify which models to try and which information criterion to use in narrowing down the predictor variables to use in each observation error model group. Model selection is done with dredge function in the MuMIn library(@MuMIn). Also, specify whether to do cross-validation to choose between observation error models, and whether to use the dredge function to use information criteria to choose the best set of predictor variables for each fold in cross validation. If DredgeCrossValidation is FALSE, the same predictor variables will be used for each fold, as selected for the full dataset. This saves time with large datasets. 
+
+Also, specifiy whether to save the R workspace after the models run. Note that the tweedie outputs should be the same whether using TMB (TweedieTMB) or the cpglm function (Tweedie). The negative binomial 2 in TMB is the same as the classic negative binomial in glm.nb. To get faster results, use TMB only for these distributions. They are both included for comparison in the example. The variable ResidualsTest allows excluding from cross-validation any model where the residuals have a P<0.01 for a Kolmogorov Smirnov test of whether the residuals are distributed as expected under the likelihood (testUniformity in DHARMa). This is useful for excluding poorly performing models. However, it may be too restrictive if none of the models perform well. 
 
 ```{r model specification}
 #Specify which observation error models to try. Options are delta-lognormal, delta-gamma, negative 
@@ -126,8 +128,12 @@ modelTry<-c("Lognormal","Gamma","NegBin","Tweedie","TMBnbinom1","TMBnbinom2","TM
 # Choices are AICc, AIC and BIC. 
 selectCriteria="BIC"
 
-#Specify whether to run a 10 fold cross-validation (TRUE or FALSE). This may not work with a small or unbalanced dataset.
+#Specify whether to run a 10 fold cross-validation (TRUE or FALSE). This may not work with a small 
+#or unbalanced dataset. DredgeCrossValidation specifies whether to use information criteria 
+#to find the best model in cross validation, using the dredge function, or just keep the same model formula. 
+#Do not use dredge for very large datasets, as the run will be slow.  
 DoCrossValidation<-TRUE
+DredgeCrossValidation<-FALSE
 
 #Specify whether to exclude models that fail the DHARMa residuals test. 
 ResidualTest<-TRUE
@@ -385,22 +391,28 @@ The output from this section is tables showing the RMSE and MAE values for each 
 
 
 ```{r cross-validation}
-  ######## Cross validation 10 fold  ####################################
- if(DoCrossValidation & length(which(modelFail[run,-1]=="-"))>0) {  #Don't do unless at least one model worked
+ ######## Cross validation 10 fold  ####################################
+  if(DoCrossValidation & length(which(modelFail[run,-1]=="-"))>0) {  #Don't do unless at least one model worked
+  if(NumCores>3)  {
+    cl<-makeCluster(NumCores-2)
+    registerDoParallel(cl)
+  }
   datval$cvsample<-sample(rep(1:10,length=dim(datval)[1]),replace=FALSE)
   table(datval$cvsample,datval$Year)
   rmsetab[[run]]<-data.frame(matrix(NA,10,length(modelTry),dimnames=list(1:10,modelTry)))
   metab[[run]]<-rmsetab[[run]]
-  foreach(i = 1:10 ) %do% {
+  foreach(i=1:10 ) %do% {
    datin<-datval[datval$cvsample!=i,]
    datout<-datval[datval$cvsample==i,]
    datout$SampleUnits<-rep(1,dim(datout)[1])
-   bin1<-findBestModelFunc(datin,"Binomial")[[1]]
+   if(DredgeCrossValidation) bin1<-findBestModelFunc(datin,"Binomial")[[1]] else
+    bin1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[1])),modType="Binomial",obsdatval=datin)
    if("Lognormal" %in% modelTry | "Gamma" %in% modelTry) { 
-     posdat<-filter(dat[[run]],pres==1)
+     posdat<-filter(datin,pres==1)
      for(mod in which(modelTry %in% c("Lognormal","Gamma"))) {
        if(modelFail[run,modelTry[mod]]=="-" & min(summary(posdat$Year))>0) {
-         modfit1<-findBestModelFunc(posdat,modelTry[mod])[[1]]
+         if(DredgeCrossValidation) modfit1<-findBestModelFunc(posdat,modelTry[mod])[[1]] else
+          modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod+1])),modType=modelTry[mod],obsdatval=posdat)
          predcpue<-makePredictions(bin1,modfit1,modelTry[mod],datout)
          rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
          metab[[run]][i,modelTry[mod]]<-getME(predcpue$est.cpue,datout$cpue)
@@ -409,13 +421,15 @@ The output from this section is tables showing the RMSE and MAE values for each 
    }
    for(mod in which(!modelTry %in% c("Lognormal","Gamma"))) {
      if(modelFail[run,modelTry[mod]]=="-") {
-       modfit1<-findBestModelFunc(datin,modelTry[mod])[[1]]
+       if(DredgeCrossValidation) modfit1<-findBestModelFunc(datin,modelTry[mod])[[1]] else
+        modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod+1])),modType=modelTry[mod],obsdatval=posdat)
        predcpue<-makePredictions(modfit1,modType=modelTry[mod], newdat = datout)
        rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
        metab[[run]][i,modelTry[mod]]<-getME(predcpue$est.cpue,datout$cpue)
      }
    }
   }
+ if(NumCores>3) stopCluster(cl)
 # Calculate RMSE and ME
  modelTable[[run]]$RMSE[-1]<-apply(rmsetab[[run]],2,mean,na.rm=TRUE)
  modelTable[[run]]$ME[-1]<-apply(metab[[run]],2,mean,na.rm=TRUE)
@@ -425,7 +439,8 @@ The output from this section is tables showing the RMSE and MAE values for each 
  write.csv(metab[[run]],paste0(outVal,"me.csv"))
  plotCrossVal(rmsetab[[run]],metab[[run]],paste0(outVal,"CrossValidation.pdf"))
  #Select best model based on cross validation
- best<-which(!is.na( modelTable[[run]]$RMSE) & modelTable[[run]]$RMSE==min(modelTable[[run]]$RMSE,na.rm=TRUE))
+ best<-which(!is.na( modelTable[[run]]$RMSE) & 
+     modelTable[[run]]$RMSE==min(modelTable[[run]]$RMSE,na.rm=TRUE))-1 #Less 1 to exclude binomial
  bestmod[run]<-modelTry[best]
  predbestmod[[run]]<-predvals[[modelTry[best]]]
  plotFits(predbestmod[[run]],bestmod[run],paste0(outVal,"BestTotal.pdf"))
@@ -433,7 +448,7 @@ The output from this section is tables showing the RMSE and MAE values for each 
  }
 rm(list=c("bin1","predvals","modfits"))
 print(paste(run, common[run],"complete"))
-#} 
+#}
 source(paste0(baseDir,"/5.FinalModelPrinting.r"))
 ###################### End of analysis loop #######################
 

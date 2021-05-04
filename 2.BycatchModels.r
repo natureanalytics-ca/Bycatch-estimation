@@ -9,7 +9,7 @@
 # Contact Beth Babcock ebabcock@rsmas.miami.edu for assistance. 
 
 ############### Step 1. Enter the data specification in the file named here #############################
-specFile<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code/1.BycatchModelSpecificationExample.r"
+specFile<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code/1.BycatchModelSpecificationBUMset.r"
 # Either set the working directory or put the full patch in the filename.
 # Complete the information in the file before continuing. You may run through specFile line by line, but it 
 # will also be sourced again later. The file will be saved, with the addition of the date, to the output directory
@@ -199,12 +199,14 @@ for(run in 1:numSp) {
    datin<-datval[datval$cvsample!=i,]
    datout<-datval[datval$cvsample==i,]
    datout$SampleUnits<-rep(1,dim(datout)[1])
-   bin1<-findBestModelFunc(datin,"Binomial")[[1]]
+   if(DredgeCrossValidation) bin1<-findBestModelFunc(datin,"Binomial")[[1]] else
+    bin1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[1])),modType="Binomial",obsdatval=datin)
    if("Lognormal" %in% modelTry | "Gamma" %in% modelTry) { 
-     posdat<-filter(dat[[run]],pres==1)
+     posdat<-filter(datin,pres==1)
      for(mod in which(modelTry %in% c("Lognormal","Gamma"))) {
        if(modelFail[run,modelTry[mod]]=="-" & min(summary(posdat$Year))>0) {
-         modfit1<-findBestModelFunc(posdat,modelTry[mod])[[1]]
+         if(DredgeCrossValidation) modfit1<-findBestModelFunc(posdat,modelTry[mod])[[1]] else
+          modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod+1])),modType=modelTry[mod],obsdatval=posdat)
          predcpue<-makePredictions(bin1,modfit1,modelTry[mod],datout)
          rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
          metab[[run]][i,modelTry[mod]]<-getME(predcpue$est.cpue,datout$cpue)
@@ -213,7 +215,8 @@ for(run in 1:numSp) {
    }
    for(mod in which(!modelTry %in% c("Lognormal","Gamma"))) {
      if(modelFail[run,modelTry[mod]]=="-") {
-       modfit1<-findBestModelFunc(datin,modelTry[mod])[[1]]
+       if(DredgeCrossValidation) modfit1<-findBestModelFunc(datin,modelTry[mod])[[1]] else
+        modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod+1])),modType=modelTry[mod],obsdatval=posdat)
        predcpue<-makePredictions(modfit1,modType=modelTry[mod], newdat = datout)
        rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
        metab[[run]][i,modelTry[mod]]<-getME(predcpue$est.cpue,datout$cpue)
@@ -230,7 +233,8 @@ for(run in 1:numSp) {
  write.csv(metab[[run]],paste0(outVal,"me.csv"))
  plotCrossVal(rmsetab[[run]],metab[[run]],paste0(outVal,"CrossValidation.pdf"))
  #Select best model based on cross validation
- best<-which(!is.na( modelTable[[run]]$RMSE) & modelTable[[run]]$RMSE==min(modelTable[[run]]$RMSE,na.rm=TRUE))
+ best<-which(!is.na( modelTable[[run]]$RMSE) & 
+     modelTable[[run]]$RMSE==min(modelTable[[run]]$RMSE,na.rm=TRUE))-1 #Less 1 to exclude binomial
  bestmod[run]<-modelTry[best]
  predbestmod[[run]]<-predvals[[modelTry[best]]]
  plotFits(predbestmod[[run]],bestmod[run],paste0(outVal,"BestTotal.pdf"))
