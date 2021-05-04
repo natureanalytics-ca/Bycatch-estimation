@@ -8,11 +8,11 @@
 
 #Select the model you want to run
 #Options for model types are: c("Lognormal","Gamma","NegBin","Tweedie","TMBnbinom1","TMBnbinom2", "TMBtweedie")
-ModelSelect<-"TMBnbinom1"  
+ModelSelect<-"Gamma"  
 #Specify a model formula for the model, or for the positive catch portion for delta models
-FormulaSelect<- as.formula(y~Year)  
+FormulaSelect<- as.formula(y~area + fleet + Year)  
 #Specify a model for the binomial portion of delta models (Not used for others)
-FormulaBin<- as.formula(y~Year)  
+FormulaBin<- as.formula(y~habBUM + hbf + season + 1 + area + fleet + Year)  
 #Give the number of the species to pull out the correct data
 SpeciesSelect<-1  
 

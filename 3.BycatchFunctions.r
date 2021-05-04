@@ -62,10 +62,16 @@ gettimefunc2=function(x) {
   timeval
 }  
 
+seasonfunc<-function(month,numseason=4) {
+  if(!is.numeric(month)) month=as.numeric(as.character(month))
+  seasons=rep(1:numseason,each=12/numseason)
+  seasons[month]
+}
+
 # Function to count the number of unique levels in a vector
 length.unique=function(x) length(unique(x))
 
-# Stratum designations from Scott-Denton paper, and shrimp observer manual 
+# Stratum designations from Scott-Denton paper, and shrimp observer manual for GOM shrimp areas
 areafunc=function(x) {
   x$StatZone[is.na(x$StatZone)]=-1
   area=rep(-1,dim(x)[1])  
@@ -92,22 +98,12 @@ areafunc=function(x) {
   area
 }
 
-#Function to calculate the four seasons
-seasonfunc=function(x,monthcol) {
-  season=rep(-1,dim(x)[1])
-  month=as.numeric(x[,monthcol])
-  season[month>=1 & month<=4]=1
-  season[month>=5 & month<=8]=2
-  season[month>=9 & month<=12]=3
-  season
-}
-
 # Function to find mode of a categorical variable
-mostfreqfunc=function(x) {
+mostfreqfunc<-function(x) {
   x=x[!is.na(x)]
   if(length(x)>0) {
-   y=table(x)
-   temp=unlist(names(y)[y==max(y)][1]) 
+   y=aggregate(x,list(x),length)
+   temp=y$Group.1[y$x==max(y$x)][1]
   } else temp=NA
   temp
 }
@@ -208,7 +204,7 @@ standard.error<-function(x) {
   sd(x)/sqrt(length(x))
 }
 
-#Generate standard errors of predictions from simulation from regression coefficents and their var/covar matrix
+#Generate standard errors of predictions from simulation from regression coefficients and their var/covar matrix
 getSimSE<-function(modfit, df1, transFunc="none",offsetval=NULL, nsim=nSims) {
   if(length(coef(modfit))==dim(vcov(modfit))[1]) {
     b=t(mvrnorm(nsim,coef(modfit),vcov(modfit)))
@@ -396,6 +392,96 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
   returnval  
 }
 
+#Function to predict total positive trips or total catches with prediction SE
+makePredictionsVar<-function(modfit1,modfit2=NULL,modType,newdat,obsdatval,printOutput=FALSE,nsims=nSims) {
+  newdat$Effort=newdat$Effort/newdat$SampleUnits
+  newdat=uncount(newdat,SampleUnits)
+  nObs=dim(newdat)[1]
+  if(!is.null(modfit1)) {
+    response1<-data.frame(predict(modfit1,newdata=newdat,type="response",se.fit=TRUE))
+    if(dim(response1)[2]==1) {
+      names(response1)="fit"
+      if(modType=="Tweedie")
+        response1$se.fit=getSimSE(modfit1, newdat, transFunc="exp",offsetval=NULL, nsim=nSims) else
+          response1$se.fit=rep(NA,dim(response1)[2])
+    }
+    if(!is.null(modfit2))  {
+      response2<-data.frame(predict(modfit2,newdata=newdat,se.fit=TRUE,type="response"))
+      names(response2)=paste0(names(response2),"2")
+    }    
+    if(modType== "Binomial") {
+      allpred<-cbind(newdat,response1) %>%
+        mutate(Total=fit,
+               TotalVar=se.fit^2+fit*(1-fit))
+    }
+    if(modType == "Lognormal" ){
+      allpred<-cbind(newdat,response1,response2) %>% 
+        mutate(pos.cpue=lnorm.mean(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
+               pos.cpue.se=lnorm.se(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
+               prob.se=sqrt(se.fit^2+fit*(1-fit))) %>% 
+        mutate(Total=Effort*fit*pos.cpue,
+               TotalVar=Effort^2*lo.se(fit,prob.se,pos.cpue,pos.cpue.se)^2) 
+    }
+    if(modType == "Gamma"){
+      allpred<-cbind(newdat,response1,response2) %>%
+        mutate(pos.cpue.se=sqrt(se.fit2^2+fit2^2*gamma.shape(modfit2)[[1]]),
+               prob.se=sqrt(se.fit^2+fit*(1-fit))) %>% 
+        mutate(Total=Effort*fit*fit2,
+               TotalVar=Effort^2*lo.se(fit,prob.se,fit2,pos.cpue.se)^2) 
+    }
+    if(modType =="NegBin") {
+      allpred<-cbind(newdat,response1)   %>% 
+        mutate(Total=fit,
+               TotalVar=se.fit^2+fit+fit^2/modfit1$theta)              
+    }
+    if(modType =="Tweedie") {
+      allpred<-cbind(newdat,response1)   %>% 
+        mutate(Total=Effort*fit,
+               TotalVar=Effort^2*(se.fit^2+modfit1$phi*fit^modfit1$p)) 
+    }
+    if(modType == "TMBnbinom1") {
+      allpred<-cbind(newdat,response1)  %>% 
+        mutate(Total=fit,
+               TotalVar=se.fit^2+fit+fit*sigma(modfit1))              
+    }
+    if(modType == "TMBnbinom2") {
+      allpred<-cbind(newdat,response1)  %>% 
+        mutate(Total=fit,
+               TotalVar=se.fit^2+fit+fit^2/sigma(modfit1))              
+    }
+    if(modType == "TMBtweedie") {
+      allpred<-cbind(newdat,response1)  %>% 
+        mutate(Total=Effort*fit,
+               TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))              
+    }
+    stratapred<-allpred %>% 
+      group_by_at(all_of(requiredVarNames)) %>% 
+      summarize(Total=sum(Total),
+                TotalVar=sum(TotalVar))  %>% 
+      mutate(Total.se=sqrt(TotalVar))    
+    yearpred<-stratapred%>% group_by(Year) %>% 
+      summarize(Total=sum(Total,na.rm=TRUE),TotalVar=sum(TotalVar)) %>%
+      mutate(Year=as.numeric(as.character(Year)),Total.se=sqrt(TotalVar))%>%
+      mutate(Total.cv=Total.se/Total)
+    if(is.na(max(yearpred$Total.cv)) | max(yearpred$Total.cv,na.rm=TRUE)>10) {
+      print(paste(common[run],modType," CV >10 or NA variance")) 
+      yearpred<-NULL
+      stratapred<-NULL
+      allpred<-NULL
+      returnval=NULL
+    }  else {
+      returnval=yearpred
+      if(printOutput) {
+        write.csv(stratapred,paste0(dirname[[run]],common[run],catchType[run],modType,"StratumSummary.csv"))
+        write.csv(yearpred,paste0(dirname[[run]],common[run],catchType[run],modType,"AnnualSummary.csv"))
+      }
+    } 
+  } else {
+    returnval=NULL
+  }
+  returnval
+}
+
 #Function to predict without variances to get predictions quickly for cross validation
 makePredictions<-function(modfit1,modfit2=NULL,modType,newdat) {
   if(!is.null(modfit1)) {
@@ -432,11 +518,82 @@ makePredictions<-function(modfit1,modfit2=NULL,modType,newdat) {
   returnval
 }
 
+## Function to get an abundance index with SE, Does not yet have year interactions as random effects
+makeIndexVar<-function(modfit1,modfit2=NULL,modType,obsdatval,newdat=newDat,printOutput=FALSE,nsims=nSims) {
+    returnval=NULL
+    if(!is.null(modfit1)) {
+    response1<-data.frame(predict(modfit1,newdata=newdat,type="response",se.fit=TRUE))
+    if(dim(response1)[2]==1) {
+      names(response1)="fit"
+      if(modType=="Tweedie")
+        response1$se.fit=getSimSE(modfit1, newdat, transFunc="exp",offsetval=NULL, nsim=nSims) else
+          response1$se.fit=rep(NA,dim(response1)[2])
+    }
+    if(!is.null(modfit2))  {
+      response2<-data.frame(predict(modfit2,newdata=newdat,se.fit=TRUE,type="response"))
+      names(response2)=paste0(names(response2),"2")
+    }    
+    if(modType== "Binomial") {
+      allpred<-cbind(newdat,response1) %>%
+        mutate(Index=fit,
+               SE=se.fit)
+    }
+    if(modType == "Lognormal" ){
+      allpred<-cbind(newdat,response1,response2) %>% 
+        mutate(pos.cpue=lnorm.mean(fit2,se.fit2),
+               pos.cpue.se=lnorm.se(fit2,se.fit2),
+               prob.se=se.fit) %>% 
+        mutate(Index=fit*pos.cpue,
+               SE=lo.se(fit,prob.se,pos.cpue,pos.cpue.se)) 
+    }
+    if(modType == "Gamma"){
+      allpred<-cbind(newdat,response1,response2) %>%
+        mutate(pos.cpue.se=se.fit2,
+               prob.se=se.fit) %>% 
+        mutate(Index=fit*fit2,
+               SE=lo.se(fit,prob.se,fit2,pos.cpue.se)) 
+    }
+    if(modType =="NegBin") {
+      allpred<-cbind(newdat,response1)   %>% 
+        mutate(Index=fit,
+               SE=se.fit)              
+    }
+    if(modType =="Tweedie") {
+      allpred<-cbind(newdat,response1)   %>% 
+        mutate(Index=fit,
+               SE=se.fit) 
+    }
+    if(modType == "TMBnbinom1") {
+      allpred<-cbind(newdat,response1)  %>% 
+        mutate(Index=fit,
+               SE=se.fit)              
+    }
+    if(modType == "TMBnbinom2") {
+      allpred<-cbind(newdat,response1)  %>% 
+        mutate(Index=fit,
+               SE=se.fit)              
+    }
+    if(modType == "TMBtweedie") {
+      allpred<-cbind(newdat,response1)  %>% 
+        mutate(Index=fit,
+               SE=se.fit)              
+    }
+    allpred=allpred %>% mutate(ymin=Index-SE,ymax=Index+SE)  %>%
+     mutate(ymin=ifelse(ymin<0,0,ymin))
+    returnval=allpred
+    if(printOutput) {
+        write.csv(allpred,paste0(dirname[[run]],common[run],catchType[run],modType,"Index.csv"))
+      }
+  }
+  returnval
+}
+
+
 #Function to plot either total positive trips (binomial) or total catch/bycatch (all other models)
 plotFits<-function(yearpred,modType,fileName,subtext="") {
   if(!is.null(yearpred)) {
-    if(modType=="Binomial") ytitle=paste0(common[run]," ","predicted positive trips") else
-      ytitle=paste0(common[run]," ",catchType[run]," (",catchUnit[run],")")
+    if(modType=="Binomial") ytitle=paste0(common[run]," ","predicted total positive trips") else
+      ytitle=paste0("Total",common[run]," ",catchType[run]," (",catchUnit[run],")")
     if(modType %in% c("Lognormal","Gamma")) modType=paste("Delta",modType)
     yearpred<-yearpred %>% mutate(Year=as.numeric(as.character(Year)),ymin=Total-Total.se,ymax=Total+Total.se) %>%
       mutate(ymin=ifelse(ymin>0,ymin,0))
@@ -457,8 +614,36 @@ plotFits<-function(yearpred,modType,fileName,subtext="") {
 }
 }
 
-#Function plots residuals with both R and Dharma library and calculate residual diagnostics.
+#Function to plot abundance index plus minus standard error
+plotIndex<-function(yearpred,modType,fileName,subtext="") {
+  if(!is.null(yearpred)) {
+    if(modType=="Binomial") ytitle=paste0(common[run]," ","Positive trip index") else
+      ytitle=paste0("Index ", common[run]," ",catchType[run]," (",catchUnit[run],")")
+    if(modType %in% c("Lognormal","Gamma")) modType=paste("Delta",modType)
+    yearpred<-yearpred %>% mutate(Year=as.numeric(as.character(Year)),ymin=Index-SE,ymax=Index+SE) %>%
+      mutate(ymin=ifelse(ymin>0,ymin,0))
+    if(modType=="All") {
+      g<-ggplot(yearpred,aes(x=Year,y=Index,ymin=ymin,ymax=ymax,fill=Source,col=Source))+
+        geom_line()+ geom_ribbon(alpha=0.3)+xlab("Year")+
+        ylab(ytitle)+
+        ggtitle(paste0("Index ",common[run],",", modType,"  +/- SE"),
+          subtitle=subtext)
+    } else {
+      g<-ggplot(yearpred,aes(x=Year,y=Index,ymin=ymin,ymax=ymax))+
+        geom_line()+ geom_ribbon(alpha=0.3)+xlab("Year")+
+        ylab(ytitle)+
+        ggtitle(paste0("Index",common[run],",", modType,"  +/- SE"))
+    }
+    if(length(indexVarNames)>1) {
+        varplot=as.formula(paste0("~",paste(grep("Year",indexVarNames,invert=TRUE,value=TRUE),sep="+")))
+        g=g+facet_wrap(varplot)
+    }
+    print(g)
+    ggsave(fileName,height=5,width=7)
+}
+}
 
+#Function plots residuals with both R and Dharma library and calculate residual diagnostics.
 ResidualsFunc<-function(modfit1,modType,fileName,nsim=250) {
   pdf(fileName,height=5,width=7)
   if(!is.null(modfit1)) {
@@ -631,95 +816,6 @@ FitModelFunc<-function(formula1,formula2,modType,obsdatval,outputDir) {
   list(modfit1=modfit1,modfit2=modfit2)
 }
 
-#Function to predict total positive trips or total catches with prediction SE
-makePredictionsVar<-function(modfit1,modfit2=NULL,modType,newdat,obsdatval,printOutput=FALSE,nsims=nSims) {
-  newdat$Effort=newdat$Effort/newdat$SampleUnits
-  newdat=uncount(newdat,SampleUnits)
-  nObs=dim(newdat)[1]
-  if(!is.null(modfit1)) {
-    response1<-data.frame(predict(modfit1,newdata=newdat,type="response",se.fit=TRUE))
-    if(dim(response1)[2]==1) {
-      names(response1)="fit"
-      if(modType=="Tweedie")
-        response1$se.fit=getSimSE(modfit1, newdat, transFunc="exp",offsetval=NULL, nsim=nSims) else
-          response1$se.fit=rep(NA,dim(response1)[2])
-    }
-    if(!is.null(modfit2))  {
-      response2<-data.frame(predict(modfit2,newdata=newdat,se.fit=TRUE,type="response"))
-      names(response2)=paste0(names(response2),"2")
-    }    
-    if(modType== "Binomial") {
-      allpred<-cbind(newdat,response1) %>%
-        mutate(Total=fit,
-               TotalVar=se.fit^2+fit*(1-fit))
-    }
-    if(modType == "Lognormal" ){
-      allpred<-cbind(newdat,response1,response2) %>% 
-        mutate(pos.cpue=lnorm.mean(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
-               pos.cpue.se=lnorm.se(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
-               prob.se=sqrt(se.fit^2+fit*(1-fit))) %>% 
-        mutate(Total=Effort*fit*pos.cpue,
-               TotalVar=Effort^2*lo.se(fit,prob.se,pos.cpue,pos.cpue.se)^2) 
-    }
-    if(modType == "Gamma"){
-      allpred<-cbind(newdat,response1,response2) %>%
-        mutate(pos.cpue.se=sqrt(se.fit2^2+fit2^2*gamma.shape(modfit2)[[1]]),
-               prob.se=sqrt(se.fit^2+fit*(1-fit))) %>% 
-        mutate(Total=Effort*fit*fit2,
-               TotalVar=Effort^2*lo.se(fit,prob.se,fit2,pos.cpue.se)^2) 
-    }
-    if(modType =="NegBin") {
-      allpred<-cbind(newdat,response1)   %>% 
-        mutate(Total=fit,
-               TotalVar=se.fit^2+fit+fit^2/modfit1$theta)              
-    }
-    if(modType =="Tweedie") {
-      allpred<-cbind(newdat,response1)   %>% 
-        mutate(Total=Effort*fit,
-               TotalVar=Effort^2*(se.fit^2+modfit1$phi*fit^modfit1$p)) 
-    }
-    if(modType == "TMBnbinom1") {
-      allpred<-cbind(newdat,response1)  %>% 
-        mutate(Total=fit,
-               TotalVar=se.fit^2+fit+fit*sigma(modfit1))              
-    }
-    if(modType == "TMBnbinom2") {
-      allpred<-cbind(newdat,response1)  %>% 
-        mutate(Total=fit,
-               TotalVar=se.fit^2+fit+fit^2/sigma(modfit1))              
-    }
-    if(modType == "TMBtweedie") {
-      allpred<-cbind(newdat,response1)  %>% 
-        mutate(Total=Effort*fit,
-               TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))              
-    }
-    stratapred<-allpred %>% 
-      group_by_at(all_of(requiredVarNames)) %>% 
-      summarize(Total=sum(Total),
-                TotalVar=sum(TotalVar))  %>% 
-      mutate(Total.se=sqrt(TotalVar))    
-    yearpred<-stratapred%>% group_by(Year) %>% 
-      summarize(Total=sum(Total,na.rm=TRUE),TotalVar=sum(TotalVar)) %>%
-      mutate(Year=as.numeric(as.character(Year)),Total.se=sqrt(TotalVar))%>%
-      mutate(Total.cv=Total.se/Total)
-    if(is.na(max(yearpred$Total.cv)) | max(yearpred$Total.cv,na.rm=TRUE)>10) {
-      print(paste(common[run],modType," CV >10 or NA variance")) 
-      yearpred<-NULL
-      stratapred<-NULL
-      allpred<-NULL
-      returnval=NULL
-    }  else {
-      returnval=yearpred
-      if(printOutput) {
-        write.csv(stratapred,paste0(dirname[[run]],common[run],catchType[run],modType,"StratumSummary.csv"))
-        write.csv(yearpred,paste0(dirname[[run]],common[run],catchType[run],modType,"AnnualSummary.csv"))
-      }
-    } 
-  } else {
-    returnval=NULL
-  }
-  returnval
-}
 
 #Function to simulate DHARMa residuals from a negative binomial GAM
 simulateNegBinGam <- function(modfit, nsims=250, offsetval=1){
