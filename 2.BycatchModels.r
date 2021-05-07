@@ -216,7 +216,7 @@ for(run in 1:numSp) {
    for(mod in which(!modelTry %in% c("Lognormal","Gamma"))) {
      if(modelFail[run,modelTry[mod]]=="-") {
        if(DredgeCrossValidation) modfit1<-findBestModelFunc(datin,modelTry[mod])[[1]] else
-        modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod+1])),modType=modelTry[mod],obsdatval=posdat)
+        modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod+1])),modType=modelTry[mod],obsdatval=datin)
        predcpue<-makePredictions(modfit1,modType=modelTry[mod], newdat = datout)
        rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
        metab[[run]][i,modelTry[mod]]<-getME(predcpue$est.cpue,datout$cpue)

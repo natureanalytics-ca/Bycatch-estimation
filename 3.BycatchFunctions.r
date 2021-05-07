@@ -798,6 +798,7 @@ FitModelFunc<-function(formula1,formula2,modType,obsdatval,outputDir) {
     modfit1=try(glmmTMB(formula3,family=TMBfamily,data=obsdatval))
   }
   if(modType =="TMBtweedie"){
+    obsdatval$y=obsdatval$cpue
     TMBfamily=gsub("TMB","",modType)
     modfit1=try(glmmTMB(formula2,family=TMBfamily,data=obsdatval))
   }
@@ -846,6 +847,7 @@ FitModelFuncCV<-function(formula1,modType,obsdatval) {
     modfit1=try(glmmTMB(formula1,family=TMBfamily,data=obsdatval))
   }
   if(modType =="TMBtweedie"){
+    obsdatval$y=obsdatval$cpue
     TMBfamily=gsub("TMB","",modType)
     modfit1=try(glmmTMB(formula1,family=TMBfamily,data=obsdatval))
   }
