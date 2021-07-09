@@ -252,8 +252,43 @@ getSimDeltaLN<-function(modfitBin,modfitLnorm, df1, nsim=10000) {
   data.frame(delta.mean=deltamean,delta.se=deltase,lnorm.mean=lnormmean,lnorm.se=lnormse)
 }
 
-# Make tables with headers using GridExtra library and print to a graphics file
-printTableFuncOld=function(headerText,df1,rowNames=FALSE,speciesRun=TRUE) {
+
+# Make tables with headers using gt and print to a graphics file
+printTableFunc=function(headerText,subheaderText="",df1,filename,useRowNames=FALSE) {
+  rowNames=rownames(df1)
+  if(is.matrix(df1) | class(df1)[1]=="model.selection") df1<-as.data.frame(df1)
+  numvars=names(select_if(df1,is.numeric))
+  numvars=numvars[!numvars %in% c("Year","year")]
+  if(useRowNames) df1<-cbind(" "=rowNames,df1)
+  x=gt(df1)%>%
+    tab_header(title = headerText,
+      subtitle=subheaderText) %>%
+    fmt_number(
+      columns=one_of(numvars),
+      n_sigfig = 3) %>%
+    tab_options(table.width=720,
+      table.font.size=10,
+      column_labels.font.size=10,
+       heading.title.font.size=12  )
+  gtsave(x,file=filename, vwidth=720,vheight=864,zoom=1)
+}
+
+# Make pretty table with headers using kable
+printTableFunc=function(headerText,subheaderText="",df1,filename,useRowNames=FALSE) {
+  if(is.matrix(df1) | class(df1)[1]=="model.selection") 
+    df1<-as.data.frame(df1)
+  df1<-df1 %>%
+  mutate_if(
+    is.numeric,
+    ~ ifelse(abs(.x) > 1, round(.x), round(.x, 2))
+  )
+  kable(df1,caption = paste(headerText,subheaderText),format="html") %>%
+  kable_styling(full_width=FALSE) %>%
+  save_kable(filename)
+}
+
+# Make ANOVA tables with headers using GridExtra library and print to a graphics file
+printTableFunc=function(headerText,df1,rowNames=FALSE,speciesRun=TRUE) {
  padding <- unit(0.5,"line")
  if(speciesRun) title <- textGrob(paste(headerText,common[run],catchType[run]),gp=gpar(fontsize=12)) else
    title <- textGrob(headerText,gp=gpar(fontsize=12))
@@ -270,21 +305,30 @@ printTableFuncOld=function(headerText,df1,rowNames=FALSE,speciesRun=TRUE) {
  grid.draw(table)
 }
 
-# Make tables with headers using gt and print to a graphics file
-printTableFunc=function(headerText,subheaderText="",df1,filename,useRowNames=FALSE) {
-  rowNames=rownames(df1)
-  if(is.matrix(df1) | class(df1)[1]=="model.selection") df1<-as.data.frame(df1)
-  numvars=names(select_if(df1,is.numeric))
-  numvars=numvars[!numvars %in% c("Year","year")]
-  if(useRowNames) df1<-cbind(" "=rowNames,df1)
-  x=gt(df1)%>%
-    tab_header(title = headerText,
-      subtitle=subheaderText) %>%
-    fmt_number(
-      columns=one_of(numvars),
-      n_sigfig = 3)
-  gtsave(x,file=filename,zoom=1)
+# Make pretty anova tables with kable
+printANOVAFunc2=function(headerText,subheaderText="",df1,filename,useRowNames=TRUE) {
+  numcols=dim(df1)[2]
+  dust(df1,  keep_rownames=useRowNames) %>%
+  sprinkle(col=2:numcols,round=1) %>%
+  sprinkle(col=numcols+1,fn=quote(pvalString(value))) %>%
+  sprinkle_colnames(.rownames="Term") %>%
+  kable(caption = paste0(headerText," ",subheaderText)) %>%
+  kable_styling(full_width=FALSE) %>%
+  save_kable(file=filename)
 }
+
+# Make  anova tables with gt
+printANOVAFunc2=function(headerText,subheaderText="",df1,filename,useRowNames=TRUE) {
+  numcols=dim(df1)[2]
+  dust(df1,  keep_rownames=useRowNames) %>%
+  sprinkle(col=2:numcols,round=1) %>%
+  sprinkle(col=numcols+1,fn=quote(pvalString(value))) %>%
+  sprinkle_colnames(.rownames="Term") %>%
+  kable(caption = paste0(headerText," ",subheaderText)) %>%
+  kable_styling(full_width=FALSE) %>%
+  save_kable(file=filename)
+}
+
 
 #Function to find best model by information criteria, of model types 
 #Binomial, Lognormal, Gamma, Negative Binomial and Tweedie.
@@ -369,8 +413,19 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
     if(modType=="Tweedie") modfit1<-cpglm(formula(modfit1),data=obsdatval,na.action=na.fail)
     if(modType %in% c("TMBnbinom1","TMBnbinom2","TMBtweedie") ) 
       modfit1<-glmmTMB(formula(modfit1),family=TMBfamily,data=obsdatval,na.action=na.fail)
-    modfit2<-try(dredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras))
-    if(class(modfit2)[1]!="try-error") {
+   if(useParallel) {
+      cl2<-makeCluster(NumCores-2)
+      registerDoParallel(cl2)
+      clusterExport(cl2,varlist=c("obsdatval","modfit1","keepVars"),envir=environment())
+     clusterEvalQ(cl2, {library(glmmTMB)
+                        library(cplm)    
+                        library(MASS) } )
+     modfit2<-try(MuMIn::pdredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras,cl2))
+     stopCluster(cl2)
+   } else {
+     modfit2<-try(dredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras))
+   }
+     if(class(modfit2)[1]!="try-error") {
       modfit3<-get.models(modfit2,1)[[1]] 
     } else {
       modfit2<-NULL
@@ -378,13 +433,13 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
       }
     if(printOutput & !is.null(modfit2)) {
      write.csv(modfit2,paste0(dirname[[run]],common[run],catchType[run],"ModelSelection",modType,".csv"))
-     printTableFunc(paste(modType," Model Selection"),df1=mutate(modfit2,weight=round(weight,4)),filename=paste0(dirname[[run]],common[run],catchType[run],"ModelSelection",modType,".pdf"),useRowNames=TRUE)
+#     printTableFunc(paste(modType," Model Selection"),df1=mutate(modfit2,weight=round(weight,4)),filename=paste0(dirname[[run]],common[run],catchType[run],"ModelSelection",modType,".pdf"),useRowNames=TRUE)
      if(modType %in% c("Binomial","NegBin")) anova1=anova(modfit3,test="Chi")
      if(modType %in% c("Tweedie","TMBnbinom1","TMBnbinom2","TMBtweedie")) anova1=NULL
      if(modType %in% c("Lognormal","Gamma")) anova1=anova(modfit3,test="F")
      if(!is.null(anova1)) {
       write.csv(anova1,paste0(dirname[[run]],common[run],catchType[run],modType,"Anova.csv"))
-      printTableFunc(paste(modType,"Anova"),df1=anova1,filename=paste0(dirname[[run]],common[run],catchType[run],modType,"Anova.pdf"),useRowNames=TRUE)
+#      printANOVAFunc(paste(modType,"Anova"),df1=anova1,filename=paste0(dirname[[run]],common[run],catchType[run],modType,"Anova.pdf"),useRowNames=TRUE)
      }
     }
     returnval=list(modfit3,modfit2)
@@ -600,17 +655,14 @@ plotFits<-function(yearpred,modType,fileName,subtext="") {
     if(modType=="All") {
       g<-ggplot(yearpred,aes(x=Year,y=Total,ymin=ymin,ymax=ymax,fill=Source,col=Source))+
         geom_line()+ geom_ribbon(alpha=0.3)+xlab("Year")+
-        ylab(ytitle)+
-        ggtitle(paste0(common[run],",", modType," prediction +/- prediction SE"),
-          subtitle=subtext)
+        ylab(ytitle)
     } else {
       g<-ggplot(yearpred,aes(x=Year,y=Total,ymin=ymin,ymax=ymax))+
         geom_line()+ geom_ribbon(alpha=0.3)+xlab("Year")+
-        ylab(ytitle)+
-        ggtitle(paste0(common[run],",", modType," prediction +/- prediction SE"))
+        ylab(ytitle)
     }
     print(g)
-    ggsave(fileName,height=5,width=7)
+    if(!is.null(fileName)) ggsave(fileName,height=5,width=7)
 }
 }
 
@@ -625,39 +677,32 @@ plotIndex<-function(yearpred,modType,fileName,subtext="") {
     if(modType=="All") {
       g<-ggplot(yearpred,aes(x=Year,y=Index,ymin=ymin,ymax=ymax,fill=Source,col=Source))+
         geom_line()+ geom_ribbon(alpha=0.3)+xlab("Year")+
-        ylab(ytitle)+
-        ggtitle(paste0("Index ",common[run],",", modType,"  +/- SE"),
-          subtitle=subtext)
+        ylab(ytitle)
     } else {
       g<-ggplot(yearpred,aes(x=Year,y=Index,ymin=ymin,ymax=ymax))+
         geom_line()+ geom_ribbon(alpha=0.3)+xlab("Year")+
-        ylab(ytitle)+
-        ggtitle(paste0("Index",common[run],",", modType,"  +/- SE"))
+        ylab(ytitle)
     }
     if(length(indexVarNames)>1) {
         varplot=as.formula(paste0("~",paste(grep("Year",indexVarNames,invert=TRUE,value=TRUE),sep="+")))
         g=g+facet_wrap(varplot)
     }
     print(g)
-    ggsave(fileName,height=5,width=7)
-}
+    if(!is.null(fileName)) ggsave(fileName,height=5,width=7)
+  }
 }
 
 #Function plots residuals with both R and Dharma library and calculate residual diagnostics.
 ResidualsFunc<-function(modfit1,modType,fileName,nsim=250) {
-  pdf(fileName,height=5,width=7)
+  require(quantreg)
+  if(!is.null(fileName))   pdf(fileName,height=5,width=7)
   if(!is.null(modfit1)) {
-    if(class(modfit1)[1] %in% c("glm","lm","negbin")) {
-      par(mfrow=c(1,2))
-      plot(modfit1,1:2)
-      title(paste("Standard R residuals",modType),outer=TRUE,line=-2)
-    } else  {  #Plot ordinary residuals for cpglm,  TMB, or mgcv
-      dfcheck<-data.frame(Expected=predict(modfit1),Residuals=residuals(modfit1))
-      g1<-ggplot(dfcheck,aes(x=Expected,y=Residuals))+geom_point()+
-        geom_abline(intercept=0,slope=0)+ggtitle(paste(modType,"residuals"))
-      g2<-ggplot(dfcheck,aes(sample=Residuals))+geom_qq()+geom_qq_line()+ggtitle(paste("qqnorm"))
-      grid.arrange(g1,g2,ncol=2)
-    }  
+    dfcheck<-data.frame(Expected=predict(modfit1),Residuals=residuals(modfit1))
+    g1<-ggplot(dfcheck,aes(x=Expected,y=Residuals))+geom_point()+
+        geom_abline(intercept=0,slope=0)+
+        ggtitle(paste("a. ",modType,"ordinary residuals"))
+    g2<-ggplot(dfcheck,aes(sample=Residuals))+geom_qq()+geom_qq_line()+
+        ggtitle(paste("b. QQ normal of residuals"))
     if(class(modfit1)[1] =="cpglm") {  #Extra step to simulate DHARMa for cpglm or mgcv
       simvals=simulateTweedie(modfit1,nsim)
       simulationOutput = try(createDHARMa(simulatedResponse = simvals, observedResponse =modfit1$y , 
@@ -699,16 +744,31 @@ ResidualsFunc<-function(modfit1,modType,fileName,nsim=250) {
       if(class(simulationOutput)[1]=="try-error") simulationOutput <- try(simulateResiduals(fittedModel = modfit1, n = nsim*10))
     }
     if(class(simulationOutput)[1]!="try-error") {
-      plot(simulationOutput, quantreg = F)
-      title(modType,outer=2,line=-1)
+#      plot(simulationOutput, quantreg = F)
+#      title(modType,outer=2,line=-1)
+      df1<-data.frame(Residual=simulationOutput$scaledResiduals,Predictor=simulationOutput$fittedPredictedResponse) %>%
+        arrange(Residual) %>%
+        mutate(Empirical.Quantile=(1:n())/(n()+1)) %>%
+        mutate(Expected.Quantile=qunif(Empirical.Quantile)) %>%
+        mutate(Rank.Predictor= rank(Predictor, ties.method = "average")) %>%
+        mutate(Rank.Predictor = Rank.Predictor/max(Rank.Predictor))
+      g3<-ggplot(df1,aes(x=Expected.Quantile,y=Residual))+geom_point()+
+        geom_abline()+ylab("DHARMa scaled residuals")+ xlab("Expected quantile")+
+        ggtitle("c. QQ uniform scaled residuals")
+      g4<-ggplot(df1,aes(x=Rank.Predictor,y=Residual))+
+        geom_point()+xlab("Model predictions (rank transformed)")+
+        ylab("DHARMa scaled residuals")+ggtitle("d. Scaled residual vs. predicted")+
+        geom_hline(aes(yintercept=0.5),lty=2)+geom_hline(aes(yintercept=0.75),lty=2)+geom_hline(aes(yintercept=0.25),lty=2)+
+        geom_quantile(method = "rqss",col="red", formula=y ~ qss(x, lambda = 2))
+      grid.arrange(g1,g2,g3,g4,ncol=2)
       test1=testUniformity(simulationOutput,plot=FALSE)
       test2=testDispersion(simulationOutput,plot=FALSE)
       test3=testZeroInflation(simulationOutput,plot=FALSE)
       test4=testOutliers(simulationOutput,plot=FALSE)
       returnval=c(test1$statistic,
-                  KS.p=test1$p.value,
+                  test1$p.value,
                   test2$statistic,
-                  Dispersion.p=test2$p.value,
+                  test2$p.value,
                   test3$statistic,
                   test3$p.value,
                   test4$statistic,
@@ -716,13 +776,13 @@ ResidualsFunc<-function(modfit1,modType,fileName,nsim=250) {
       names(returnval)=c("KS.D","KS.p","Dispersion.ratio","Dispersion.p","ZeroInf.ratio","ZeroInf.p","Outlier","Outlier.p")
     } else returnval=NULL    
   } else returnval=NULL
-  dev.off()
+ if(!is.null(fileName))  dev.off()
   returnval
 }
 
 #Function to plot total catch by all models plus a validation number 
 plotFitsValidate<-function(yearpred,trueval,fileName,colName) {
-  yearpred<-yearpred %>% mutate(ymin=Total-1.96*Total.se,ymax=Total+1.96*Total.se)%>%
+  yearpred<-yearpred %>% mutate(ymin=Total-Total.se,ymax=Total+Total.se)%>%
     mutate(ymin=ifelse(ymin>0,ymin,0)) %>%
     dplyr::filter(Valid==1)
   trueval<-trueval %>% rename(Total=!!colName) %>%
@@ -732,10 +792,9 @@ plotFitsValidate<-function(yearpred,trueval,fileName,colName) {
   g<-ggplot(yearpred,aes(x=Year,y=Total,ymin=ymin,ymax=ymax,color=Source,fill=Source))+
       geom_line()+ geom_ribbon(alpha=0.3)+ylab("Total catch (kg)")+xlab("Year")+
       ylab(paste0(common[run]," ",catchType[run]," (",catchUnit[run],")"))+
-      ggtitle(paste0(common[run],": Model comparison with validation with 95% C.I."))+
       geom_point(data=yearpred[yearpred$Source=="Validation",],aes(x=Year,y=Total),size=2)
   print(g)
-  ggsave(fileName,height=5,width=7)
+  if(!is.null(fileName)) ggsave(fileName,height=5,width=7)
  }
 
 #Function to plot boxplots of RMSE and ME across folds
@@ -743,11 +802,11 @@ plotCrossVal<-function(rmse,me,fileName) {
  RMSE<-pivot_longer(rmse,everything(),names_to="Model")
  ME<-pivot_longer(me,everything(),names_to="Model")
  df<-bind_rows(list(RMSE=RMSE,ME=ME),.id="Metric")
- g<-ggplot(df)+geom_boxplot(aes(x=Model,y=value,fill=Model))+
-   facet_wrap(Metric~.,ncol=1,scales="free")+xlab("Model")+ylab("Cross validation metrics")+
-  ggtitle(paste0("Cross validaton for ",common[run]," ", catchType[run]))
+ g<-ggplot(df)+geom_boxplot(aes(x=Model,y=value),fill="lightgrey")+
+   facet_wrap(Metric~.,ncol=1,scales="free")+
+   xlab("Model")+ylab("Cross validation metrics")
  print(g)
- ggsave(fileName,height=5,width=7)
+ if(!is.null(fileName)) ggsave(fileName,height=5,width=7)
 }
 
 #Calculate RMSE
