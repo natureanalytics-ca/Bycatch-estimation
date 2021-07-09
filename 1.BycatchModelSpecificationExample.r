@@ -6,7 +6,7 @@ baseDir<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code"
 setwd(baseDir)
 
 #Give a name to the run, which will be used to set up a directory for the the outputs
-runName<-"Simulated Data Example"
+runName<-"Simulated data example"
 
 # What would you like to estimate?
 # You may calculate either an annual abundance index, or total bycatch, or both
@@ -24,7 +24,7 @@ obsdat<-read.csv("ExampleoBs.csv",as.is=TRUE)
 logdat<-read.csv("ExampleLog.csv",as.is=TRUE) 
 
 ### What is the sample unit in this data set? e.g. sets or trips. 
-sampleUnit<-"sets" #Usually trips, may be sets
+sampleUnit<-"trips" #Usually trips, may be sets
 
 #Specify the name of the effort variable in the observer data and logbook data. These must be
 #in the same units. (e.g. 1000 hook hours). Also specify a column for effort
@@ -71,8 +71,8 @@ factorNames=c("Year","season")
 #binomial and tweedie, specified as: "Lognormal" for delta lognormal,"Gamma" for delta gamm,"NegBin" for negative binomial 
 #using glm.mb in the MASS library, "Tweedie" for cpglm, and TMB nbinom1, nbinom2, and tweedie in the glmmTMB 
 #library, specified with "TMB" followed by the model type. Binomial is run
-#automatically as part of the delta models if either of them are selected. 
-modelTry<-c("Lognormal","Gamma","NegBin","Tweedie","TMBnbinom1","TMBnbinom2","TMBtweedie")
+#automatically as part of the delta models if either of them are selected.
+modelTry<-c("Binomial","Lognormal","Gamma","NegBin","Tweedie","TMBnbinom1","TMBnbinom2","TMBtweedie")
 
 #Specify preferred information criteria for model selection
 # Choices are AICc, AIC and BIC. 
@@ -83,13 +83,20 @@ selectCriteria<-"BIC"
 #to find the best model in cross validation, using the dredge function, or just keep the same model formula. 
 #Do not use dredge for very large datasets, as the run will be slow.  
 DoCrossValidation<-TRUE
-DredgeCrossValidation<-FALSE
+DredgeCrossValidation<-TRUE
 
 #Specify whether to exclude models that fail the DHARMa residuals test. 
 ResidualTest<-FALSE
 
 # Specify whether to save R workspace. This should be true unless you 
-# don't have space on your disk. 
-
+# don't have space on your disk. Also specify whether to use parallel processing to
+# speed up calculations.
 saveR<-TRUE
+useParallel<-TRUE
+
+## Validation. If you have true values of the total bycatch (for example in a simulation study)
+# Make PlotValidation true and fill out the rest of the specification. 
+plotValidation<-FALSE
+trueVals<-NULL
+trueCols<-NULL
 

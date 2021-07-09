@@ -1,0 +1,115 @@
+---
+title: " "
+date: " "
+output: pdf_document
+header-includes:
+    - \usepackage{caption}
+---
+\captionsetup[table]{labelformat=empty}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+```
+
+```{r load data,  results=FALSE}
+# outVal<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code/outputSimulated data example/Simulated species dead discard/"
+load(paste0(outVal,"/","resultsR"))
+library(tidyverse)
+library(kableExtra)
+library(ggplot2)
+library(DHARMa)
+library(gridExtra)
+library(cplm)
+library(glmmTMB)
+library(MASS)
+library(tweedie)
+source("3.BycatchFunctions.r")
+theme_set(theme_bw())
+fignum<-1
+tablenum<-1
+
+```
+
+## Summary of results for `r runName` for  `r common[run]` (`r sp[run]`)
+`r Sys.Date()`
+
+```{r print results, results="asis",fig.align="left", fig.height=4}
+#Print data summary
+cat("Table ", tablenum,". Input data summary.", sep="")
+tablenum<-tablenum+1
+yearSum[[run]] %>%
+  mutate_if(is.numeric,   ~ ifelse(abs(.x) > 1, round(.x), round(.x, 2))) %>%
+   kbl(format="latex") %>%
+   kable_styling(
+     latex_options = c("hold_position","scale_down","basic")) %>%
+    print()
+#Print modelTable including ModelFail
+cat("Table ",tablenum,". Formula of ",selectCriteria," best model, along whether models were fit successfully. A dash (-) means the model converged. Failure to converge may be from data (not all years had a positive observation for delta models), fit (models did not converge) or CV (bycatch estimates had very large CVs). If cross-validation was done, mean RMSE and mean ME across folds is shown (near zero is better)",sep="")
+tablenum<-tablenum+1
+df1<-modelTable[[run]] %>% 
+  mutate(Failure=modelFail[run,]) %>%
+   mutate_if(is.numeric,round,2)
+if(!DoCrossValidation) df1<-dplyr::select(df1,-c("RMSE","ME"))
+kbl(df1,format="latex") %>%
+   kable_styling(
+     latex_options = c("hold_position","basic")) %>%
+    print()
+#Table residual summary
+cat("Table ",tablenum,". DHARMa residual tests. Significant P values may indicate poor model specification.",sep="")
+tablenum<-tablenum+1
+data.frame(residualTab[[run]]) %>%
+ kbl(format="latex",digits = 2) %>%
+   kable_styling(
+     latex_options = c("hold_position","scale_down","basic")) %>%
+    print()
+# Figures of All models together
+if(EstimateBycatch ) {
+ if(plotValidation)  plotFitsValidate(filter(allmods[[run]],Valid==1),trueVals,NULL,trueCols[run]) else
+    plotFits(filter(allmods[[run]],Valid==1),"All",NULL)
+  cat("\n Figure ",fignum,". Total bycatch estimates for all valid models, including a simple unstratified ratio estimator, for ",common[run],". \n",sep="")
+  fignum<-fignum+1
+}
+if(EstimateIndex & any(allindex[[run]]$Valid==1)) {
+ plotIndex(filter(allindex[[run]],Valid==1),"All",NULL)
+ cat("\n Figure ",fignum,". Abundance indices from all valid models for ",common[run],". \n",sep="")
+ fignum<-fignum+1
+} 
+#Show cross validation figures
+if(DoCrossValidation &!all(is.na(modelTable[[run]]$RMSE))) {
+ plotCrossVal(rmsetab[[run]],metab[[run]],NULL)
+ cat("\n Figure ",fignum,". Cross validation results for ",common[run],". Lowest RMSE model is ",bestmod[run],".\n",sep="")
+ fignum<-fignum+1
+}
+#Print for each model type
+for(mod in 1:length(modelTry)) {
+if(modelFail[run,mod]=="-") {
+  cat("\n Table ",tablenum,". Model selection table for ",modelTry[mod],". Weights are calculated based on ",selectCriteria,".",sep="") 
+  tablenum<-tablenum+1
+  data.frame(modelSelectTable[[run]][[modelTry[mod]]]) %>%
+   mutate_if(is.numeric,~ ifelse(abs(.x) > 1, round(.x,1), round(.x, 2))) %>%
+   kbl(format="latex") %>%
+   kable_styling(
+     latex_options = c("hold_position","scale_down","basic")) %>%
+    print()
+   temp<-ResidualsFunc(modFits[[run]][[modelTry[mod]]],modelTry[mod],fileName=NULL)
+   cat("\n Figure ",fignum,". Residuals for the ",selectCriteria, " best model for ",        modelTry[mod],". \n",sep="")
+   fignum<-fignum+1
+  if(EstimateBycatch) {
+   if(plotValidation & modelTry[mod]!="Binomial")  plotFitsValidate(filter(allmods[[run]],Source==modelTry[mod]),trueVals,NULL,trueCols[run]) else
+   plotFits(modPredVals[[run]][[modelTry[mod]]],modelTry[mod],fileName=NULL)
+  if(modelTry[mod]=="Binomial")  cat("\n Figure ",fignum,". Estimated total number of positive ",sampleUnit," from Binomial plus and minus one standard error. \n",sep="") else
+   cat("\n Figure ",fignum,". Estimated total bycatch from ",modelTry[mod]," plus and minus one standard error. \n",sep="")
+   fignum<-fignum+1
+ }
+ if(EstimateIndex) {
+   plotIndex(modIndexVals[[run]][[modelTry[mod]]],modelTry[mod],fileName=NULL)
+   cat("\n Figure ",fignum,". Estimated relative index from ",modelTry[mod],". \n",sep="")
+   fignum<-fignum+1
+ }
+ 
+}
+}
+
+```
+
