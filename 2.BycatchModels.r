@@ -67,7 +67,8 @@ for(run in 1:numSp) {
         modfit2<-NULL
      }
      if(EstimateBycatch) {
-      modPredVals[[run]][[modelTry[mod]]]<-makePredictionsVar(modfit1=modfit1,modfit2=modfit2,modType=modelTry[mod],newdat=logdat,printOutput=TRUE)   
+      modPredVals[[run]][[modelTry[mod]]]<-makePredictionsSimVar(modfit1=modfit1,
+         modfit2=modfit2,modtype=modelTry[mod],newdat=logdat)   
      }
      if(EstimateIndex) {
       modIndexVals[[run]][[modelTry[mod]]]<-makeIndexVar(modfit1=modfit1,modfit2=modfit2,modType=modelTry[mod],printOutput=TRUE)   
@@ -87,7 +88,7 @@ for(run in 1:numSp) {
  #Combine all predictions, except Binomial
   if(EstimateBycatch) {
    yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=CatEst,Total.se=Catse) %>%
-     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,TotalFixed=Total)
+     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,TotalFixed=Total,Year=factor(Year),Total.mean=NA)
    allmods[[run]]<-bind_rows(c(modPredVals[[run]],list(Ratio=yearsumgraph)),.id="Source") %>%
      filter(!Source=="Binomial")
    allmods[[run]]$Valid<-ifelse(modelFail[run,match(allmods[[run]]$Source,dimnames(modelFail)[[2]])]=="-" | allmods[[run]]$Source=="Ratio",1,0)
@@ -178,4 +179,4 @@ print(paste(run, common[run],"complete, ",Sys.time()))
 #Save R workspace
 if(saveR) save.image(file=paste0(outDir,"/R.workspace.rData"))
 Sys.time()
-Sys.time()-startTime
+Sys.time()-StartTime
