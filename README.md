@@ -7,9 +7,9 @@ These R files run a generic bycatch estimation tool. See the User Guide (UserGui
 1.BycatchModelSpecification.r
 2.BycatchModels.r
 3.BycatchFunctions.r
-4.PreliminaryDataSummary.r
-5.FinalModelPrinting.r
-6.ExamineModelResults.r
+4.PreliminarySetup.r
+5.PrintDataSummary.rmd
+6.PrintResults.rmd
 
 To use the tool, give the names of your data files, and the desired settings in
 1.BycatchModelSpecification.r, and then run 2.BycatchModels.r in its entirety.
