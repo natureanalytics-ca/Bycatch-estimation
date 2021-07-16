@@ -720,7 +720,7 @@ makePredictionsSimVar<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSim
       allpred<-cbind(newdat,response1)  %>%
         mutate(Total=fit,
                TotalVar=se.fit^2+fit+fit*sigma(modfit1))
-      sim = replicate(nsim,simulateNegBin1Draw(modfit1,nObs,b,newdat$Effort))  
+      sim = replicate(nsim,simulateNegBin1Draw(modfit1,nObs,a,newdat$Effort))  
   }
   if(modtype=="TMBnbinom2") {
        allpred<-cbind(newdat,response1)  %>%
