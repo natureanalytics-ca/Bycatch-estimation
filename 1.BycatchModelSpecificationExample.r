@@ -88,6 +88,9 @@ DredgeCrossValidation<-TRUE
 #Specify whether to exclude models that fail the DHARMa residuals test. 
 ResidualTest<-FALSE
 
+#Specify confidence interval for total bycatch estimates
+CIval<-0.05 #Should be the alpha level, e.g. 0.05 for 95%
+
 # Specify whether to save R workspace. This should be true unless you 
 # don't have space on your disk. Also specify whether to use parallel processing to
 # speed up calculations.

@@ -88,7 +88,8 @@ for(run in 1:numSp) {
  #Combine all predictions, except Binomial
   if(EstimateBycatch) {
    yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=CatEst,Total.se=Catse) %>%
-     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,TotalFixed=Total,Year=factor(Year),Total.mean=NA)
+     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,Year=factor(Year),
+        Total.mean=NA,TotalLCI=NA,TotalUCI=NA)
    allmods[[run]]<-bind_rows(c(modPredVals[[run]],list(Ratio=yearsumgraph)),.id="Source") %>%
      filter(!Source=="Binomial")
    allmods[[run]]$Valid<-ifelse(modelFail[run,match(allmods[[run]]$Source,dimnames(modelFail)[[2]])]=="-" | allmods[[run]]$Source=="Ratio",1,0)
