@@ -5,10 +5,15 @@
 These R files run a generic bycatch estimation tool. See the User Guide (UserGuide.pdf or UserGuide.Rmd) for details. The .r files are:
 
 1.BycatchModelSpecification.r
+
 2.BycatchModels.r
+
 3.BycatchFunctions.r
+
 4.PreliminarySetup.r
+
 5.PrintDataSummary.rmd
+
 6.PrintResults.rmd
 
 To use the tool, give the names of your data files, and the desired settings in
