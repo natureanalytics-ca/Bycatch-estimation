@@ -8,7 +8,7 @@
 # Contact Beth Babcock ebabcock@rsmas.miami.edu for assistance. 
 
 ############### Step 1. Enter the data specification in the file named here #############################
-specFile<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code/1.BycatchModelSpecificationExample.r"
+specFile<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code/1.BycatchModelSpecificationLLKeptNumericYear.r"
 # Either set the working directory or put the full patch in the filename.
 # Complete the information in the file before continuing. You may run through specFile line by line, but it 
 # will also be sourced again later. The file will be saved, with the addition of the date, to the output directory
@@ -88,8 +88,9 @@ for(run in 1:numSp) {
  #Combine all predictions, except Binomial
   if(EstimateBycatch) {
    yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=CatEst,Total.se=Catse) %>%
-     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,Year=factor(Year),
-        Total.mean=NA,TotalLCI=NA,TotalUCI=NA)
+     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,
+        Total.mean=NA,TotalLCI=Total-1.96*Total.se,TotalUCI=Total+1.96*Total.se)
+   if(is.factor(modPredVals[[run]][[1]]$Year)) yearsumgraph$Year<-factor(yearsumgraph$Year)
    allmods[[run]]<-bind_rows(c(modPredVals[[run]],list(Ratio=yearsumgraph)),.id="Source") %>%
      filter(!Source=="Binomial")
    allmods[[run]]$Valid<-ifelse(modelFail[run,match(allmods[[run]]$Source,dimnames(modelFail)[[2]])]=="-" | allmods[[run]]$Source=="Ratio",1,0)
@@ -133,7 +134,7 @@ for(run in 1:numSp) {
    if("Lognormal" %in% modelTry | "Gamma" %in% modelTry) { 
      posdat<-filter(datin,pres==1)
      for(mod in which(modelTry %in% c("Lognormal","Gamma"))) {
-       if(modelFail[run,modelTry[mod]]=="-" & min(summary(posdat$Year))>0) {
+       if(modelFail[run,modelTry[mod]]=="-" & !(!is.numeric(posdat$Year) & min(table(posdat$Year))==0)) {
          if(DredgeCrossValidation) modfit1<-findBestModelFunc(posdat,modelTry[mod])[[1]] else
           modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),modType=modelTry[mod],obsdatval=posdat)
          predcpue<-makePredictions(bin1,modfit1,modelTry[mod],datout)
@@ -168,7 +169,7 @@ save(list=c("numSp","yearSum","runName", "common", "sp","bestmod",
  "residualTab" ,"run","modelTry","EstimateIndex","EstimateBycatch",
   "DoCrossValidation","indexVarNames","selectCriteria","sampleUnit",
    "modelTry","catchType","catchUnit","residualTab",
-   "plotValidation","trueVals","trueCols"),
+   "plotValidation","trueVals","trueCols","startYear"),
   file=paste0(outVal,"/","resultsR"))
 rmarkdown::render("6.PrintResults.rmd",
    params=list(outVal=outVal))

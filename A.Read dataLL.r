@@ -148,6 +148,7 @@ spyearsum[is.na(spyearsum)]<-0
 names(spyearsum)[-1]<-paste0("catch.",names(spyearsum)[-1])  
 logyearsum<-merge(logyearsum,spyearsum)
 logyearsum
+write.csv(logyearsum,"ReefLLkept.csv")
 
 #Summary of log data by stratum
 logyearstratsum<-logtripll %>% 
@@ -170,7 +171,7 @@ obsllset<-obsll %>% group_by(TRIPNUMBER,SETNUMBER) %>%
 dim(obsllset)
 summary(obsllset)
 #Add selected catch type as column to set summary (should be same as above)
-#catchtype<-"kept.kg"
+catchtype<-"kept.kg"
 #catchtype<-"discard.dead.num"
 #catchtype<-"all.encountered.num"
 if(catchtype=="kept.kg") {

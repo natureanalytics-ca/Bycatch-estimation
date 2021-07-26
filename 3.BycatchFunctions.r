@@ -175,10 +175,10 @@ lo.se=function(x1,x1e,x2,x2e) {
 
 #Calculate normal mean and standard error from lognormal mean and se
 norm.mean=function(x1,x1e) {
-  log(x1)-0.5*log(1+(x1/x1e)^2)
+  log(x1)-0.5*log(1+(x1e/x1)^2)
 }
 norm.se=function(x1,x1e) {
-  sqrt(log(1+(x1/x1e)^2))
+  sqrt(log(1+(x1e/x1)^2))
 }
 #Calculate lognormal mean and standard error from normal mean and se
 lnorm.mean=function(x1,x1e) {
@@ -253,82 +253,6 @@ getSimDeltaLN<-function(modfitBin,modfitLnorm, df1, nsim=10000) {
 }
 
 
-# Make tables with headers using gt and print to a graphics file
-printTableFunc=function(headerText,subheaderText="",df1,filename,useRowNames=FALSE) {
-  rowNames=rownames(df1)
-  if(is.matrix(df1) | class(df1)[1]=="model.selection") df1<-as.data.frame(df1)
-  numvars=names(select_if(df1,is.numeric))
-  numvars=numvars[!numvars %in% c("Year","year")]
-  if(useRowNames) df1<-cbind(" "=rowNames,df1)
-  x=gt(df1)%>%
-    tab_header(title = headerText,
-      subtitle=subheaderText) %>%
-    fmt_number(
-      columns=one_of(numvars),
-      n_sigfig = 3) %>%
-    tab_options(table.width=720,
-      table.font.size=10,
-      column_labels.font.size=10,
-       heading.title.font.size=12  )
-  gtsave(x,file=filename, vwidth=720,vheight=864,zoom=1)
-}
-
-# Make pretty table with headers using kable
-printTableFunc=function(headerText,subheaderText="",df1,filename,useRowNames=FALSE) {
-  if(is.matrix(df1) | class(df1)[1]=="model.selection") 
-    df1<-as.data.frame(df1)
-  df1<-df1 %>%
-  mutate_if(
-    is.numeric,
-    ~ ifelse(abs(.x) > 1, round(.x), round(.x, 2))
-  )
-  kable(df1,caption = paste(headerText,subheaderText),format="html") %>%
-  kable_styling(full_width=FALSE) %>%
-  save_kable(filename)
-}
-
-# Make ANOVA tables with headers using GridExtra library and print to a graphics file
-printTableFunc=function(headerText,df1,rowNames=FALSE,speciesRun=TRUE) {
- padding <- unit(0.5,"line")
- if(speciesRun) title <- textGrob(paste(headerText,common[run],catchType[run]),gp=gpar(fontsize=12)) else
-   title <- textGrob(headerText,gp=gpar(fontsize=12))
- if(rowNames)
-  table <-tableGrob(df1,theme=mytheme) else
-    table <-tableGrob(df1,theme=mytheme,rows=NULL)
-  table <- gtable_add_rows(table, 
-                         heights = grobHeight(title) + padding,
-                         pos = 0)
- table<- gtable_add_grob(table,title,
-                        t=1, l=1, 
-                        r=ncol(table))
- grid.newpage()
- grid.draw(table)
-}
-
-# Make pretty anova tables with kable
-printANOVAFunc2=function(headerText,subheaderText="",df1,filename,useRowNames=TRUE) {
-  numcols=dim(df1)[2]
-  dust(df1,  keep_rownames=useRowNames) %>%
-  sprinkle(col=2:numcols,round=1) %>%
-  sprinkle(col=numcols+1,fn=quote(pvalString(value))) %>%
-  sprinkle_colnames(.rownames="Term") %>%
-  kable(caption = paste0(headerText," ",subheaderText)) %>%
-  kable_styling(full_width=FALSE) %>%
-  save_kable(file=filename)
-}
-
-# Make  anova tables with gt
-printANOVAFunc2=function(headerText,subheaderText="",df1,filename,useRowNames=TRUE) {
-  numcols=dim(df1)[2]
-  dust(df1,  keep_rownames=useRowNames) %>%
-  sprinkle(col=2:numcols,round=1) %>%
-  sprinkle(col=numcols+1,fn=quote(pvalString(value))) %>%
-  sprinkle_colnames(.rownames="Term") %>%
-  kable(caption = paste0(headerText," ",subheaderText)) %>%
-  kable_styling(full_width=FALSE) %>%
-  save_kable(file=filename)
-}
-
 
 #Function to find best model by information criteria, of model types 
 #Binomial, Lognormal, Gamma, Negative Binomial and Tweedie.
@@ -384,10 +308,10 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
                     as.formula(paste("y~",paste(allVarNames,collapse="+"),offset)),
                     as.formula(paste("y~",paste(allVarNames[!allVarNames %in% varExclude],collapse="+"),offset)),
                     as.formula(paste("y~",paste(requiredVarNames,collapse="+"),offset)), NA)
-  if(length(varExclude)>0 & modType %in% c("Lognormal","Gamma")) {
-    formulaList[[1]]<-NULL
-    formulaList[[1]]<-NULL
-  }  
+  # if(length(varExclude)>0 & modType %in% c("Lognormal","Gamma")) {
+  #   formulaList[[1]]<-NULL
+  #   formulaList[[1]]<-NULL
+  # }  
   args$formula=formulaList[[1]]
   modfit1<-try(do.call(funcName,args))
   for(i in 2:(length(formulaList))-1) {
@@ -447,96 +371,6 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
   returnval  
 }
 
-#Function to predict total positive trips or total catches with prediction SE
-#NOte variance calculations are wrong. Did not include covariance. Use makePredictiosnSimVar instead
-# makePredictionsVar<-function(modfit1,modfit2=NULL,modType,newdat,obsdatval,printOutput=FALSE,nsims=nSims) {
-#   newdat$Effort=newdat$Effort/newdat$SampleUnits
-#   newdat=uncount(newdat,SampleUnits)
-#   nObs=dim(newdat)[1]
-#   if(!is.null(modfit1)) {
-#     response1<-data.frame(predict(modfit1,newdata=newdat,type="response",se.fit=TRUE))
-#     if(dim(response1)[2]==1) {
-#       names(response1)="fit"
-#       if(modType=="Tweedie")
-#         response1$se.fit=getSimSE(modfit1, newdat, transFunc="exp",offsetval=NULL, nsim=nSims) else
-#           response1$se.fit=rep(NA,dim(response1)[2])
-#     }
-#     if(!is.null(modfit2))  {
-#       response2<-data.frame(predict(modfit2,newdata=newdat,se.fit=TRUE,type="response"))
-#       names(response2)=paste0(names(response2),"2")
-#     }    
-#     if(modType== "Binomial") {
-#       allpred<-cbind(newdat,response1) %>%
-#         mutate(Total=fit,
-#                TotalVar=se.fit^2+fit*(1-fit))
-#     }
-#     if(modType == "Lognormal" ){
-#       allpred<-cbind(newdat,response1,response2) %>% 
-#         mutate(pos.cpue=lnorm.mean(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
-#                pos.cpue.se=lnorm.se(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
-#                prob.se=sqrt(se.fit^2+fit*(1-fit))) %>% 
-#         mutate(Total=Effort*fit*pos.cpue,
-#                TotalVar=Effort^2*lo.se(fit,prob.se,pos.cpue,pos.cpue.se)^2) 
-#     }
-#     if(modType == "Gamma"){
-#       allpred<-cbind(newdat,response1,response2) %>%
-#         mutate(pos.cpue.se=sqrt(se.fit2^2+fit2^2*gamma.shape(modfit2)[[1]]),
-#                prob.se=sqrt(se.fit^2+fit*(1-fit))) %>% 
-#         mutate(Total=Effort*fit*fit2,
-#                TotalVar=Effort^2*lo.se(fit,prob.se,fit2,pos.cpue.se)^2) 
-#     }
-#     if(modType =="NegBin") {
-#       allpred<-cbind(newdat,response1)   %>% 
-#         mutate(Total=fit,
-#                TotalVar=se.fit^2+fit+fit^2/modfit1$theta)              
-#     }
-#     if(modType =="Tweedie") {
-#       allpred<-cbind(newdat,response1)   %>% 
-#         mutate(Total=Effort*fit,
-#                TotalVar=Effort^2*(se.fit^2+modfit1$phi*fit^modfit1$p)) 
-#     }
-#     if(modType == "TMBnbinom1") {
-#       allpred<-cbind(newdat,response1)  %>% 
-#         mutate(Total=fit,
-#                TotalVar=se.fit^2+fit+fit*sigma(modfit1))              
-#     }
-#     if(modType == "TMBnbinom2") {
-#       allpred<-cbind(newdat,response1)  %>% 
-#         mutate(Total=fit,
-#                TotalVar=se.fit^2+fit+fit^2/sigma(modfit1))              
-#     }
-#     if(modType == "TMBtweedie") {
-#       allpred<-cbind(newdat,response1)  %>% 
-#         mutate(Total=Effort*fit,
-#                TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))              
-#     }
-#     stratapred<-allpred %>% 
-#       group_by_at(all_of(requiredVarNames)) %>% 
-#       summarize(Total=sum(Total),
-#                 TotalVar=sum(TotalVar))  %>% 
-#       mutate(Total.se=sqrt(TotalVar))    
-#     yearpred<-stratapred%>% group_by(Year) %>% 
-#       summarize(Total=sum(Total,na.rm=TRUE),TotalVar=sum(TotalVar)) %>%
-#       mutate(Year=as.numeric(as.character(Year)),Total.se=sqrt(TotalVar))%>%
-#       mutate(Total.cv=Total.se/Total)
-#     if(is.na(max(yearpred$Total.cv)) | max(yearpred$Total.cv,na.rm=TRUE)>10) {
-#       print(paste(common[run],modType," CV >10 or NA variance")) 
-#       yearpred<-NULL
-#       stratapred<-NULL
-#       allpred<-NULL
-#       returnval=NULL
-#     }  else {
-#       returnval=yearpred
-#       if(printOutput) {
-#         write.csv(stratapred,paste0(dirname[[run]],common[run],catchType[run],modType,"StratumSummary.csv"))
-#         write.csv(yearpred,paste0(dirname[[run]],common[run],catchType[run],modType,"AnnualSummary.csv"))
-#       }
-#     } 
-#   } else {
-#     returnval=NULL
-#   }
-#   returnval
-# }
 
 #Function to predict without variances to get predictions quickly for cross validation
 makePredictions<-function(modfit1,modfit2=NULL,modType,newdat) {
@@ -662,6 +496,8 @@ makePredictionsSimVar<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSim
       response2<-data.frame(predict(modfit2,newdata=newdat,se.fit=TRUE,type="response"))
       names(response2)=paste0(names(response2),"2")
     }
+
+if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit)>10000)  {
   #Set up model matrices for simulation
   yvar=sub( " ", " ",formula(modfit1) )[2]
   newdat<-cbind(y=rep(1,nObs),newdat)
@@ -768,14 +604,16 @@ makePredictionsSimVar<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSim
   yearpred$Total<-yeartotal$Total 
   if(is.na(max(yearpred$Total.cv)) | max(yearpred$Total.cv,na.rm=TRUE)>10) {
        print(paste(common[run],modtype," CV >10 or NA variance")) 
-       yearpred<-NULL
-       stratapred<-NULL
        returnval=NULL
   }  else  {     returnval=yearpred  }
   if(printOutput) {
        write.csv(stratapred,paste0(dirname[[run]],common[run],catchType[run],modtype,"StratumSummary.csv"))
        write.csv(yearpred,paste0(dirname[[run]],common[run],catchType[run],modtype,"AnnualSummary.csv"))
   }
+} else  {
+       print(paste(common[run],modtype," CV >10 or NA variance")) 
+       returnval=NULL
+}
   returnval
 }
 
@@ -794,6 +632,7 @@ simulateNegBin1Draw<-function(modfit,nObs,b,Effort) {
 
 #Function to plot either total positive trips (binomial) or total catch/bycatch (all other models)
 plotSums<-function(yearpred,modType,fileName,subtext="") {
+  if(is.numeric(yearpred$Year)) yearpred$Year[yearpred$Source!="Ratio"]=yearpred$Year[yearpred$Source!="Ratio"]+startYear
   if(!is.null(yearpred)) {
     if(modType=="Binomial") ytitle=paste0(common[run]," ","predicted total positive trips") else
       ytitle=paste0("Total",common[run]," ",catchType[run]," (",catchUnit[run],")")
@@ -819,6 +658,7 @@ plotSums<-function(yearpred,modType,fileName,subtext="") {
 
 #Function to plot abundance index plus minus standard error
 plotIndex<-function(yearpred,modType,fileName,subtext="") {
+  if(is.numeric(yearpred$Year)) yearpred$Year=yearpred$Year+startYear
   if(!is.null(yearpred)) {
     if(modType=="Binomial") ytitle=paste0(common[run]," ","Positive trip index") else
       ytitle=paste0("Index ", common[run]," ",catchType[run]," (",catchUnit[run],")")
@@ -844,7 +684,7 @@ plotIndex<-function(yearpred,modType,fileName,subtext="") {
 }
 
 #Function plots residuals with both R and Dharma library and calculate residual diagnostics.
-ResidualsFunc<-function(modfit1,modType,fileName,nsim=250) {
+ResidualsFunc<-function(modfit1,modType,fileName=NULL,nsim=250) {
   require(quantreg)
   if(!is.null(fileName))   pdf(fileName,height=5,width=7)
   if(!is.null(modfit1)) {
@@ -933,17 +773,21 @@ ResidualsFunc<-function(modfit1,modType,fileName,nsim=250) {
 
 #Function to plot total catch by all models plus a validation number 
 plotSumsValidate<-function(yearpred,trueval,fileName,colName) {
-  yearpred<-yearpred %>% mutate(ymin=Total-Total.se,ymax=Total+Total.se)%>%
-    mutate(ymin=ifelse(ymin>0,ymin,0)) %>%
-    dplyr::filter(Valid==1)
+  if(is.numeric(yearpred$Year)) yearpred$Year[yearpred$Source!="Ratio"]=yearpred$Year[yearpred$Source!="Ratio"]+startYear
+  yearpred<-yearpred %>% 
+      mutate(Year=as.numeric(as.character(Year)),ymin=Total-Total.se,ymax=Total+Total.se) %>%
+      mutate(ymin=ifelse(ymin>0,ymin,0))
   trueval<-trueval %>% rename(Total=!!colName) %>%
-    mutate(ymin=rep(NA,dim(trueval)[1]),ymax=rep(NA,dim(trueval)[1]),
-                  Source=rep("Validation",dim(trueval)[1]))
-  yearpred<-rbind(yearpred[,c("Year","Total","ymin","ymax","Source")],trueval[,c("Year","Total","ymin","ymax","Source")])
-  g<-ggplot(yearpred,aes(x=Year,y=Total,ymin=ymin,ymax=ymax,color=Source,fill=Source))+
-      geom_line()+ geom_ribbon(alpha=0.3)+ylab("Total catch (kg)")+xlab("Year")+
+    mutate(ymin=NA,ymax=NA,Source="Validation",
+      Total.mean=NA,TotalLCI=NA,TotalUCI=NA)
+  yearpred<-bind_rows(yearpred[,c("Year","Total","Total.mean","TotalLCI","TotalUCI","ymin","ymax","Source")],
+                       trueval[,c("Year","Total","Total.mean","TotalLCI","TotalUCI","ymin","ymax","Source")])
+  g<-ggplot(yearpred,aes(x=Year,y=Total,ymin=TotalLCI,ymax=TotalUCI,fill=Source))+
+      geom_line(aes(color=Source))+ geom_ribbon(alpha=0.3)+
+      geom_line(aes(y=Total.mean,color=Source),lty=2)+
+      xlab("Year")+
       ylab(paste0(common[run]," ",catchType[run]," (",catchUnit[run],")"))+
-      geom_point(data=yearpred[yearpred$Source=="Validation",],aes(x=Year,y=Total),size=2)
+      geom_point(data=yearpred[yearpred$Source=="Validation",],aes(x=Year,y=Total,color=Source),size=2)
   print(g)
   if(!is.null(fileName)) ggsave(fileName,height=5,width=7)
  }
@@ -1074,3 +918,169 @@ simulateNegBinGam <- function(modfit, nsims=250, offsetval=1){
   sim
 }
 
+# # Make tables with headers using gt and print to a graphics file
+# printTableFunc=function(headerText,subheaderText="",df1,filename,useRowNames=FALSE) {
+#   rowNames=rownames(df1)
+#   if(is.matrix(df1) | class(df1)[1]=="model.selection") df1<-as.data.frame(df1)
+#   numvars=names(select_if(df1,is.numeric))
+#   numvars=numvars[!numvars %in% c("Year","year")]
+#   if(useRowNames) df1<-cbind(" "=rowNames,df1)
+#   x=gt(df1)%>%
+#     tab_header(title = headerText,
+#       subtitle=subheaderText) %>%
+#     fmt_number(
+#       columns=one_of(numvars),
+#       n_sigfig = 3) %>%
+#     tab_options(table.width=720,
+#       table.font.size=10,
+#       column_labels.font.size=10,
+#        heading.title.font.size=12  )
+#   gtsave(x,file=filename, vwidth=720,vheight=864,zoom=1)
+# }
+# 
+# # Make pretty table with headers using kable
+# printTableFunc=function(headerText,subheaderText="",df1,filename,useRowNames=FALSE) {
+#   if(is.matrix(df1) | class(df1)[1]=="model.selection") 
+#     df1<-as.data.frame(df1)
+#   df1<-df1 %>%
+#   mutate_if(
+#     is.numeric,
+#     ~ ifelse(abs(.x) > 1, round(.x), round(.x, 2))
+#   )
+#   kable(df1,caption = paste(headerText,subheaderText),format="html") %>%
+#   kable_styling(full_width=FALSE) %>%
+#   save_kable(filename)
+# }
+# 
+# # Make ANOVA tables with headers using GridExtra library and print to a graphics file
+# printTableFunc=function(headerText,df1,rowNames=FALSE,speciesRun=TRUE) {
+#  padding <- unit(0.5,"line")
+#  if(speciesRun) title <- textGrob(paste(headerText,common[run],catchType[run]),gp=gpar(fontsize=12)) else
+#    title <- textGrob(headerText,gp=gpar(fontsize=12))
+#  if(rowNames)
+#   table <-tableGrob(df1,theme=mytheme) else
+#     table <-tableGrob(df1,theme=mytheme,rows=NULL)
+#   table <- gtable_add_rows(table, 
+#                          heights = grobHeight(title) + padding,
+#                          pos = 0)
+#  table<- gtable_add_grob(table,title,
+#                         t=1, l=1, 
+#                         r=ncol(table))
+#  grid.newpage()
+#  grid.draw(table)
+# }
+# 
+# # Make pretty anova tables with kable
+# printANOVAFunc2=function(headerText,subheaderText="",df1,filename,useRowNames=TRUE) {
+#   numcols=dim(df1)[2]
+#   dust(df1,  keep_rownames=useRowNames) %>%
+#   sprinkle(col=2:numcols,round=1) %>%
+#   sprinkle(col=numcols+1,fn=quote(pvalString(value))) %>%
+#   sprinkle_colnames(.rownames="Term") %>%
+#   kable(caption = paste0(headerText," ",subheaderText)) %>%
+#   kable_styling(full_width=FALSE) %>%
+#   save_kable(file=filename)
+# }
+# 
+# # Make  anova tables with gt
+# printANOVAFunc2=function(headerText,subheaderText="",df1,filename,useRowNames=TRUE) {
+#   numcols=dim(df1)[2]
+#   dust(df1,  keep_rownames=useRowNames) %>%
+#   sprinkle(col=2:numcols,round=1) %>%
+#   sprinkle(col=numcols+1,fn=quote(pvalString(value))) %>%
+#   sprinkle_colnames(.rownames="Term") %>%
+#   kable(caption = paste0(headerText," ",subheaderText)) %>%
+#   kable_styling(full_width=FALSE) %>%
+#   save_kable(file=filename)
+# }
+
+#Function to predict total positive trips or total catches with prediction SE
+#NOte variance calculations are wrong. Did not include covariance. Use makePredictiosnSimVar instead
+# makePredictionsVar<-function(modfit1,modfit2=NULL,modType,newdat,obsdatval,printOutput=FALSE,nsims=nSims) {
+#   newdat$Effort=newdat$Effort/newdat$SampleUnits
+#   newdat=uncount(newdat,SampleUnits)
+#   nObs=dim(newdat)[1]
+#   if(!is.null(modfit1)) {
+#     response1<-data.frame(predict(modfit1,newdata=newdat,type="response",se.fit=TRUE))
+#     if(dim(response1)[2]==1) {
+#       names(response1)="fit"
+#       if(modType=="Tweedie")
+#         response1$se.fit=getSimSE(modfit1, newdat, transFunc="exp",offsetval=NULL, nsim=nSims) else
+#           response1$se.fit=rep(NA,dim(response1)[2])
+#     }
+#     if(!is.null(modfit2))  {
+#       response2<-data.frame(predict(modfit2,newdata=newdat,se.fit=TRUE,type="response"))
+#       names(response2)=paste0(names(response2),"2")
+#     }    
+#     if(modType== "Binomial") {
+#       allpred<-cbind(newdat,response1) %>%
+#         mutate(Total=fit,
+#                TotalVar=se.fit^2+fit*(1-fit))
+#     }
+#     if(modType == "Lognormal" ){
+#       allpred<-cbind(newdat,response1,response2) %>% 
+#         mutate(pos.cpue=lnorm.mean(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
+#                pos.cpue.se=lnorm.se(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
+#                prob.se=sqrt(se.fit^2+fit*(1-fit))) %>% 
+#         mutate(Total=Effort*fit*pos.cpue,
+#                TotalVar=Effort^2*lo.se(fit,prob.se,pos.cpue,pos.cpue.se)^2) 
+#     }
+#     if(modType == "Gamma"){
+#       allpred<-cbind(newdat,response1,response2) %>%
+#         mutate(pos.cpue.se=sqrt(se.fit2^2+fit2^2*gamma.shape(modfit2)[[1]]),
+#                prob.se=sqrt(se.fit^2+fit*(1-fit))) %>% 
+#         mutate(Total=Effort*fit*fit2,
+#                TotalVar=Effort^2*lo.se(fit,prob.se,fit2,pos.cpue.se)^2) 
+#     }
+#     if(modType =="NegBin") {
+#       allpred<-cbind(newdat,response1)   %>% 
+#         mutate(Total=fit,
+#                TotalVar=se.fit^2+fit+fit^2/modfit1$theta)              
+#     }
+#     if(modType =="Tweedie") {
+#       allpred<-cbind(newdat,response1)   %>% 
+#         mutate(Total=Effort*fit,
+#                TotalVar=Effort^2*(se.fit^2+modfit1$phi*fit^modfit1$p)) 
+#     }
+#     if(modType == "TMBnbinom1") {
+#       allpred<-cbind(newdat,response1)  %>% 
+#         mutate(Total=fit,
+#                TotalVar=se.fit^2+fit+fit*sigma(modfit1))              
+#     }
+#     if(modType == "TMBnbinom2") {
+#       allpred<-cbind(newdat,response1)  %>% 
+#         mutate(Total=fit,
+#                TotalVar=se.fit^2+fit+fit^2/sigma(modfit1))              
+#     }
+#     if(modType == "TMBtweedie") {
+#       allpred<-cbind(newdat,response1)  %>% 
+#         mutate(Total=Effort*fit,
+#                TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))              
+#     }
+#     stratapred<-allpred %>% 
+#       group_by_at(all_of(requiredVarNames)) %>% 
+#       summarize(Total=sum(Total),
+#                 TotalVar=sum(TotalVar))  %>% 
+#       mutate(Total.se=sqrt(TotalVar))    
+#     yearpred<-stratapred%>% group_by(Year) %>% 
+#       summarize(Total=sum(Total,na.rm=TRUE),TotalVar=sum(TotalVar)) %>%
+#       mutate(Year=as.numeric(as.character(Year)),Total.se=sqrt(TotalVar))%>%
+#       mutate(Total.cv=Total.se/Total)
+#     if(is.na(max(yearpred$Total.cv)) | max(yearpred$Total.cv,na.rm=TRUE)>10) {
+#       print(paste(common[run],modType," CV >10 or NA variance")) 
+#       yearpred<-NULL
+#       stratapred<-NULL
+#       allpred<-NULL
+#       returnval=NULL
+#     }  else {
+#       returnval=yearpred
+#       if(printOutput) {
+#         write.csv(stratapred,paste0(dirname[[run]],common[run],catchType[run],modType,"StratumSummary.csv"))
+#         write.csv(yearpred,paste0(dirname[[run]],common[run],catchType[run],modType,"AnnualSummary.csv"))
+#       }
+#     } 
+#   } else {
+#     returnval=NULL
+#   }
+#   returnval
+# }

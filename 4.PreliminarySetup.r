@@ -6,6 +6,7 @@ library(MASS)
 library(lme4)
 library(cplm)
 library(DHARMa)
+library(quantreg)
 library(tidyselect)
 library(MuMIn)
 library(gridExtra)
@@ -36,6 +37,7 @@ logdat<-logdat %>%  ungroup() %>%
 requiredVarNames<-as.vector(getAllTerms(simpleModel))
 allVarNames<-as.vector(getAllTerms(complexModel))  
 allVarNames<-allVarNames[grep(":",allVarNames,invert=TRUE)]
+allVarNames<-allVarNames[grep("I(*)",allVarNames,invert=TRUE)]
 if(!all(allVarNames %in% names(obsdat))) 
   print(paste0("Variable ", allVarNames[!allVarNames%in% names(obsdat) ], " not found in observer data"))
 if(!all(allVarNames %in% names(logdat))) 
@@ -72,6 +74,15 @@ for(i in 1:length(temp)) {
     newDat[,temp[i]]<-mostfreqfunc(obsdat[,temp[i]]) 
    } 
   }
+
+#Subtract first year if numeric to improve convergence
+if(is.numeric(obsdat$Year)) {
+ startYear<-min(obsdat$Year)
+ obsdat$Year<-obsdat$Year-startYear
+ logdat$Year<-logdat$Year-startYear
+ newDat$Year<-newDat$Year-startYear
+} else startYear<-min(as.numeric(as.character(obsdat$Year)))
+
 #Set up directory for output
 setwd(baseDir)
 numSp<-length(sp)
@@ -93,7 +104,6 @@ modelFail<-matrix("-",numSp,length(modelTry),dimnames=list(common,modelTry))
 rmsetab<-list()
 metab<-list()
 residualTab<-list()
-
 
 #Make lists to keep output, which will also be output as .pdf and .csv files for use in reports.
 dirname<-list()
@@ -134,6 +144,7 @@ foreach(run= 1:numSp) %do%  {
                logyear$Effort,logyear$Effort,logyear$Year)
    yearSum[[run]]<-cbind(yearSum[[run]],CatEst=x$stratum.est,Catse=x$stratum.se) %>% 
     ungroup() %>% mutate(Year=as.numeric(as.character(Year))) %>%
+     mutate(Year=ifelse(Year<=startYear,Year+startYear,Year)) %>%
     dplyr::rename(!!paste0("Obs",sampleUnit):=ObsUnits,                                 ,
                   !!sampleUnit:=Units,
                   !!paste0(sampleUnit,"ObsFrac"):=UnitsObsFrac)
@@ -163,3 +174,4 @@ for(run in 1:numSp) {
  modFits[[run]]<- modPredVals[[run]]
  modelSelectTable[[run]]<- modPredVals[[run]]
 }
+
