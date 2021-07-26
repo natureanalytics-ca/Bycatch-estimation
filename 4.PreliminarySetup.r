@@ -144,7 +144,7 @@ foreach(run= 1:numSp) %do%  {
                logyear$Effort,logyear$Effort,logyear$Year)
    yearSum[[run]]<-cbind(yearSum[[run]],CatEst=x$stratum.est,Catse=x$stratum.se) %>% 
     ungroup() %>% mutate(Year=as.numeric(as.character(Year))) %>%
-     mutate(Year=ifelse(Year<=startYear,Year+startYear,Year)) %>%
+     mutate(Year=ifelse(Year<startYear,Year+startYear,Year)) %>%
     dplyr::rename(!!paste0("Obs",sampleUnit):=ObsUnits,                                 ,
                   !!sampleUnit:=Units,
                   !!paste0(sampleUnit,"ObsFrac"):=UnitsObsFrac)
