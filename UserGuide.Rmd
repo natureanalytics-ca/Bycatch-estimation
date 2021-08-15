@@ -2,7 +2,7 @@
 title: "Bycatch Estimator User Guide"
 author: Elizabeth A. Babcock
 date: "`r Sys.Date()`"
-bibliography: C:/Users/ebabcock/Dropbox/bycatch project/Current R code/userguide.bib  
+bibliography: C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/userguide.bib  
 output: pdf_document
 header-includes:
     - \usepackage{caption}
@@ -20,15 +20,23 @@ The R code called 2.BycatchModels.r runs a generic model-based bycatch estimatio
 
 The code runs best in R studio. Before running the code for the first time, install the latest versions of R (@R-base) and RStudio (@RStudio), as well as the following libraries: tidyverse, ggplot2, MASS, lme4, cplm, tweedie, DHARMa, tidyselect, MuMIn, gridExtra, pdftools, foreach, doParallel, reshape2, glmmTMB and quantreg (@tidyverse; @ggplot2; @MASS; @lme4; @cplm; @tweedie; @DHARMa; @tidyselect; @MuMIn; @gridExtra; @gtable; @gt; @pdftools;@foreach;@doParallel; @reshape2; @glmmTMB; @quantreg). The output figures and tables are printed to a pdf file using R Markdown and the knitr library (@knitr), which outputs a LaTex file; therefore, you must have a LaTex program installed, such as TinyTex (@TinyTeX, @tinytex). 
 
-The R code estimates total bycatch as follows. First, mean catch per unit effort (CPUE) of observed sample units (trips in this example, but it could be sets) is estimated from a linear model with predictor variables. The observation error models used are delta-lognormal, delta-gamma, negative binomial (from either glm.nb in the MASS library or glmmTMB, nbinom1 and nbinom2) and Tweedie (from cpglm or glmmTMB). Within each observation error model group, potential predictor variables are chosen based on the user's choice of information criteria (AICc, AIC or BIC) (@MuMIn). The user specifies a most complex and simplest model, and all intermediate models are considered. The user-specified simplest model will usually include year, and can also include, for example, stratification variables that are used in the observer program sampling design. The model with the lowest value of the information criterion is chosen as best within each observation error group. 
+The R code estimates total bycatch as follows. First, mean catch per unit effort (CPUE) of observed sample units (trips in this example, but it could be sets) is estimated from a linear model with predictor variables. The observation error models used are delta-lognormal, delta-gamma, negative binomial (from either glm.nb in the MASS library or glmmTMB, nbinom1 and nbinom2) and Tweedie (from cpglm or glmmTMB). For comparison, simple normal, lognormal and gamma models are also available, although these methods are not expected to perform well with many zero bycatch observations. Within each observation error model group, potential predictor variables are chosen based on the user's choice of information criteria (AICc, AIC or BIC) (@MuMIn). The user specifies a most complex and simplest model, and all intermediate models are considered. The user-specified simplest model will usually include year, and can also include, for example, stratification variables that are used in the observer program sampling design. The model with the lowest value of the information criterion is chosen as best within each observation error group. 
 
-The best candidate models in each observation error group are then compared using 10-fold cross-validation, if desired, to see which observation error model best predicts CPUE. The best model according to cross validation is the one with the lowest root mean square error (RMSE) in the predicted CPUE, excluding from consideration models that do not fit well according to criteria described below. Note that this model selection using information criteria and cross-validation is only intended as a guide. The user should also look at the information criteria across multiple models, as well as residuals and other diagnostics, and may want to choose a different model for bycatch estimation or abundance index calculation based on other criteria, such as the design of the observer sampling program. 
+The best candidate models in each observation error group are then compared using 10-fold cross-validation, if desired, to see which observation error model best predicts CPUE. The best model according to cross validation is the one with the lowest root mean square error (RMSE) in the predicted CPUE and the mean error closest to zero, excluding from consideration models that do not fit well according to criteria described below. Note that this model selection using information criteria and cross-validation is only intended as a guide. The user should also look at the information criteria across multiple models, as well as residuals and other diagnostics, and may want to choose a different model for bycatch estimation or abundance index calculation based on other criteria, such as the design of the observer sampling program. 
 
-For the best model in each observation error model group, the total bycatch is estimated by predicting the catch in all logbook trips (i.e., the whole fishery) from the fitted model and summing across trips. The catch in each trip is predicted directly by the negative binomial models. Tweedie models predict CPUE, which is then multiplied by effort. Delta-lognormal and delta-gamma models have separate components for the probability of a positive CPUE and the CPUE, which must be multiplied together (with appropriate bias corrections) and multiplied by effort to get the total catch. Catch in each trip is summed across trips to get the total catch in each year. The variance of the prediction in each trip is calculated as the variance of the prediction interval, which is the variance of the estimated mean prediction plus the residual variance. The variance of the total catch in each year is calculated using Monte Carlo simulation. Because the predicted catches in each trip are dependent on linear model coefficients, which are the same across multiple trips, the trips are not independent; thus, the variances cannot be added without accounting for the covariance. To account for this, we first drew random values of the linear model coefficients from a multivariate normal distribution with the mean and variance/covariance matrix estimated from the model. The predictions for each trip were then drawn for each draw of the parameters using the appropriate probability density function (e.g. tweedie, negative binomial) with additional parameters (e.g. residual variance, negative binomial dispersion, tweedie power and phi) estimated by the model. Trips were then summed for each year within each draw, and the mean, standard error, and quantiles (e.g. 2.5% and 97.5% for a 95% confidence interval) were then calculated across the Monte Carlo draws. Future versions of the code may add an analytic method to do this, or use Markov Chain Monte Carlo to calculate the variances. 
+For the best model in each observation error model group (according to the selected information criterion), the total bycatch is estimated by predicting the catch in all logbook trips (i.e., the whole fishery) from the fitted model and summing across trips. The catch in each trip is predicted directly by the negative binomial models. Tweedie, normal and gamma models predict CPUE, which is then multiplied by effort. Delta-lognormal and delta-gamma models have separate components for the probability of a positive CPUE and the CPUE, which must be multiplied together (with appropriate bias corrections) and multiplied by effort to get the total catch. Catch in each trip is summed across trips to get the total catch in each year. The variance of the prediction in each trip is calculated as the variance of the prediction interval, which is the variance of the estimated mean prediction plus the residual variance. Because the predicted catches in each logbook trip are dependent on linear model coefficients, which are the same across multiple trips, the trips are not independent; thus, the variances cannot be added without accounting for the covariance. The variance of the total catch in each year is thus calculated either using Monte Carlo simulation, or using a delta method. Users may also chose not to estimate variances for large logbook datasets where these methods will not work. 
 
-If the logbook data is aggregated across multiple trips (e.g. by strata) the effort is allocated equally to all the trips in a row of the logbook data table for the purpose of simulating catches.This allocation procedure is not needed to estimate the mean total bycatch, but it is necessary to estimate the variances correctly. 
 
-The model can estimate bycatch and abundance indices for multiple species or dispositons (e.g. dead discard, live release) from the same fishery simultaneously if they are all being estimated from the same data sets. 
+For the Monte Carlo variance estimation method, we first drew random values of the linear model coefficients from a multivariate normal distribution with the mean and variance/covariance matrix estimated from the model. The predictions for each trip were then drawn for each draw of the parameters using the appropriate probability density function (e.g. tweedie, negative binomial) with additional parameters (e.g. residual variance, negative binomial dispersion, tweedie power and phi) estimated by the model. Trips were then summed for each year within each draw, and the mean, standard error, and quantiles (e.g. 2.5% and 97.5% for a 95% confidence interval) were then calculated across the Monte Carlo draws. An approximation of the total variance of the predicted bycatch can also be made using a delta method. The delta method approximates the variance of a function of a variable as the derivative of the functions squared times the variance of a the original variable. Thus, the variance of the prediction intervals in the original data scale is calculated by pre and post multiplying the derivative if the inverse link function to the variance covariance matrix of the predicted values. 
+
+
+$$\Sigma_p = J \Sigma_l J'  $$
+
+were $\Sigma_l$ is the variance covariance matrix for the predicted trips in the stratum on the scale of the log link, and J is the matrix of derivatives. See the function MakePredictionsDeltaVar for the details for each model type. 
+
+If the logbook data is aggregated across multiple trips (e.g. by strata) the effort is allocated equally to all the trips in a row of the logbook data table for the purpose of simulating catches or estimating variances using the delta method. This allocation procedure is not needed to estimate the mean total bycatch, but it is necessary to estimate the variances correctly. 
+
+The model can estimate bycatch and abundance indices for multiple species or dispositions (e.g. dead discard, live release) from the same fishery simultaneously if they are all being estimated from the same data sets. 
 
 If a user requests an annual abundance index, this is calculated from the same models as were selected for bycatch estimation.  
 
@@ -42,7 +50,7 @@ Throughout the data specification file, change the values on the right hand side
 
 ```{r data spec}
 #Specify directory where R files are found. 
-baseDir<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code"
+baseDir<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code"
 setwd(baseDir)
 
 #Give a name to the run, which will be used to set up a directory for the the outputs
@@ -114,19 +122,20 @@ indexModel<-formula(y~Year)
 factorNames=c("Year","season")
 ```
 
-Next, specify which models to try and which information criterion to use in narrowing down the predictor variables to use in each observation error model group. Model selection is done with dredge function in the MuMIn library(@MuMIn). Note that the tweedie outputs should be the same whether using TMB (TweedieTMB) or the cpglm function (Tweedie). The negative binomial 2 in TMB is the same as the classic negative binomial in glm.nb. To get faster results, use TMB only for these distributions. They are both included for comparison. 
+Next, specify which models to try and which information criterion to use in narrowing down the predictor variables to use in each observation error model group. Model selection is done with dredge function in the MuMIn library(@MuMIn). Note that the tweedie outputs should be the same whether using TMB (TweedieTMB) or the cpglm function (Tweedie). The negative binomial 2 in TMB is the same as the negative binomial in glm.nb. To get faster results, use TMB only for these distributions. They are both included for comparison. 
 
 Also, specify whether to do cross-validation to choose between observation error models, and whether to use the dredge function to use information criteria to choose the best set of predictor variables for each fold in cross validation. If DredgeCrossValidation is FALSE, the same predictor variables will be used for each fold, as selected for the full data set. This saves time with large data sets. The variable ResidualsTest allows excluding from cross-validation any model where the residuals have a P<0.01 for a Kolmogorov Smirnov test of whether the residuals are distributed as expected under the likelihood (testUniformity in DHARMa). This is useful for excluding poorly performing models. However, it may be too restrictive if none of the models perform well. Specify the confidence levels desired for the total bycatch calculations. 
 
 Also, specify whether to save the R workspace after the models run. If the variable useParallel is true and your computer has multiple cores, the dredge function will be run in parallel. This greatly speeds up the calculations. If you have trouble getting this to work, set useParallel to FALSE. 
 
 ```{r model specification}
-#Specify which observation error models to try. Options are delta-lognormal, delta-gamma, negative 
-#binomial and tweedie, specified as: "Lognormal" for delta lognormal,"Gamma" for delta gamm,"NegBin" for negative binomial 
-#using glm.mb in the MASS library, "Tweedie" for cpglm, and TMB nbinom1, nbinom2, and tweedie in the glmmTMB 
-#library, specified with "TMB" followed by the model type. Binomial is run
+#Specify which observation error models to try. Options are: "Binomial", "Normal","Lognormal",
+#"Gamma","Delta-Lognormal", #"Delta-Gamma", "NegBin" for Negative binomial" using glm.mb in the MASS library,
+#"Tweedie" for Tweedie GLM from the cpglm library, and "TMBnbinom1", "TMBnbinom2", and "TMBtweedie" for
+# negative binomial 1, negative binomial 2 and Tweedie from the GLMMTMB library. Binomial is run
 #automatically as part of the delta models if either of them are selected.
-modelTry<-c("Lognormal","TMBnbinom2","TMBtweedie")
+
+modelTry<-c("Binomial","Delta-Lognormal","TMBnbinom2","TMBtweedie")
 
 #Specify preferred information criteria for model selection
 # Choices are AICc, AIC and BIC. 
@@ -144,6 +153,11 @@ ResidualTest<-FALSE
 
 #Specify confidence interval for total bycatch estimates
 CIval<-0.05 #Should be the alpha level, e.g. 0.05 for 95%
+
+# Variance calculation method. Simulate will not work with a large number of sample units
+# in the logbook data. The delta method for variance calculation is not implemented
+# for the delta-lognormal or delta-gamma methods. 
+VarCalc<-c("Simulate","DeltaMethod","None")[2] 
 
 # Specify whether to save R workspace. This should be true unless you 
 # don't have space on your disk. Also specify whether to use parallel processing to
@@ -169,28 +183,25 @@ Once the specification file is set up, open the file 2.ByCatchModels.r. The firs
 The data summaries are output to directories named "output" followed by the specified run name. A pdf file with summaries for all species (DataSummary.pdf) is placed in the main output folder, and a csv file for each species is placed in an output file named for the species. Note that records with NA in the catch or effort variable are excluded from the analysis and not included in the estimated sample size. If there are any years with no data, or no positive observations, you may want to exclude those years from the analysis. The summary table also counts the number of outliers (defined as data points more than 8 standard deviations from the mean) because outliers cause problems with fitting in some models. For data-checking, this output file also includes columns with estimated bycatch and its variance using a simple unstratified ratio estimator by year (See 3.BycatchFunctions.r for all the functions). You will get an error message if if any of the variables in the specified models are not found in the data frame. 
 
 ```{r bookkeeping,  results=FALSE}
-# This code runs a generic model-based bycatch estimation procedure. 
-# The observer data should be aggregated to the appropriate sample unit, either trips or sets.
 # Effort must be in the same units in both data sets (e.g. hook hours), but it does not matter
 # how the logbook effort data is aggregated, as long has it includes data on all stratification or 
-# predictor variables. FOr example, the data can be aggregated by year, East-West and season if those
+# predictor variables. For example, the data can be aggregated by year, East-West and season if those
 # are the stratification variables, or it can be aggregated by trip.
 # The user must specify the names of the databases and the variables to include in the 
-# The .r file named on line 12. Everything else should work automatically.
+# The .r file named on line 10. Everything else should work automatically.
 # Contact Beth Babcock ebabcock@rsmas.miami.edu for assistance. 
 
 ############### Step 1. Enter the data specification in the file named here #############################
-specFile<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code/1.BycatchModelSpecificationExample.r"
+specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationExample.r"
 # Either set the working directory or put the full patch in the filename.
 # Complete the information in the file before continuing. You may run through specFile line by line, but it 
 # will also be sourced again later. The file will be saved, with the addition of the date, to the output directory
 
 ##################################################################################
 ### From here on no changes should be needed.  
-#################################################################################
 ########################################################################
 #Read in data specification
-#source(specFile) #Commented out for user guide
+#source(specFile) #Commented out for user guide.
 #Make data summary outputs
 source(paste0(baseDir,"/4.preliminarySetup.r"))
 # Stop here and check data summaries to make sure each species has reasonable number
@@ -215,37 +226,37 @@ were $C_i$ is the catch in trip $i$ in the observer data, $b_0+ b_1x_1$ is an ex
 
 The Tweedie distribution is available using the cpglm function in the cplm library (@cplm) or the tweedie family in glmmTMB (@glmmTMB) by including "Tweedie" or TMBtweedie in modelTry. The Tweedie is a generalized function that estimates a distribution similar to a gamma distribution, except that it allows extra probability mass at zero. It is thus appropriate for continuous data with extra zeros. It uses a log link, and, in addition to the linear predictor for the log(mean) it estimates an index parameter $p$ and dispersion parameter $\phi$ which together determine the shape of the distribution. 
 
-If all years have at least one positive observation, the loop next runs the lognormal and gamma models if requested. For the lognormal model, the CPUE is log transformed, and the mean CPUE for positive observations is modeled with the lm function. For the gamma method, the log link is used to model the positive CPUE values, using the glm function.  
+If all years have at least one positive observation, the loop next runs the lognormal and gamma models if requested. For the delta lognormal model, the CPUE is log transformed, and the mean CPUE for positive observations is modeled with the lm function for positive data only. For the delta-gamma method, the log link is used to model the positive CPUE values, using the glm function. The lognormal and gamma method are similar, except that they are run on all the CPUE data, including zeros, after adding a constant of 0.1.  
 
 ```{r start main loop}
 ############## This is the main analysis loop ##########################
-StartTime<-Sys.time()  
-#for(run in 1:numSp) {
-run<-1  #For user guide, set run to 1 instead of looping
+StartTime<-Sys.time()   
+#for(run in 1:numSp) { #Loop commented out for user guide
+run<-1 
  datval<-dat[[run]]
  outVal<-dirname[[run]]
  varExclude<-NULL
  #Fit all models except delta
- for(mod in which(!modelTry %in% c("Lognormal","Gamma"))){
+ for(mod in which(!modelTry %in% c("Delta-Lognormal","Delta-Gamma"))){
    modfit1<-findBestModelFunc(datval,modelTry[mod],printOutput=TRUE)
    modelSelectTable[[run]][[modelTry[mod]]]<-modfit1[[2]]
    modFits[[run]][[modelTry[mod]]]<-modfit1[[1]]
  }
 #Fit delta models
- if("Lognormal" %in% modelTry | "Gamma" %in% modelTry) {  #Delta models if requested
+ if("Delta-Lognormal" %in% modelTry | "Delta-Gamma" %in% modelTry) {  #Delta models if requested
    posdat<-filter(dat[[run]],pres==1)
    y<-unlist(lapply(posdat[,factorNames],function(x) length(setdiff(levels(x),x)))) #See if all levels are included
    varExclude<-names(y)[y>0]
    if(length(varExclude>0)) print(paste(common[run], "excluding variable",varExclude,"from delta models for positive catch"))
    if((min(summary(posdat$Year))>0 |  is.numeric(datval$Year)) &!is.null(modFits[[run]][["Binomial"]])) { #If all years have at least one positive observation and binomial converged, carry on with delta models
-     for(mod in which(modelTry %in% c("Lognormal","Gamma")))  {
+     for(mod in which(modelTry %in% c("Delta-Lognormal","Delta-Gamma")))  {
        modfit1<-findBestModelFunc(posdat,modelTry[mod],printOutput=TRUE)
        modelSelectTable[[run]][[modelTry[mod]]]<-modfit1[[2]]
        modFits[[run]][[modelTry[mod]]]<-modfit1[[1]]
      }
    } else {
      print("Not all years have positive observations, skipping delta models")
-     modelFail[run,c("Lognormal","Gamma")]<-"data"
+     modelFail[run,c("Delta-Lognormal","Delta-Gamma")]<-"data"
      modPredVals[[run]][[modelTry[mod]]]<-NULL
      modIndexVals[[run]][[modelTry[mod]]]<-NULL
    }
@@ -256,19 +267,19 @@ The next section loops through all the models again, and calculates the model re
 
 For the best model (according to the information criterion) in each model group, both ordinary residuals and DHARMa scaled residuals are plotted, and the DHARMa diagnostics are calculated. The DHARMa library uses simulation to generate scaled residuals based on the specified observation error model so that the results are more clearly interpretable than ordinary residuals for non-normal models. DHARMA draws random predicted values from the fitted model to generate an empirical predictive density for each data point and then calculates the fraction of the empirical density that is greater than the true data point. Values of 0.5 are expected, and values near 0 or 1 indicate a mismatch between the data and the model. Particularly for the binomial and negative binomial models, in which the ordinary residuals are not normally distributed, the DHARMa residuals are a better representation of whether the data are consistent with the assumed distribution. Both the regular residuals and the DHARMa residuals are appropriate for lognormal and gamma models, since they model continuous data which is expected to be approximately normal when transformed by the link function. The DHARMA residuals should be uniformly distributed, as indicted by the QQUniform plot and the Kolmogorov-Smirnov test of uniformity. If the DHARMA residuals show significant over-dispersion then the model is not appropriate. A summary of the the DHARMa residual diagnostics is added to a table called residualTab, and models that fail the Kolmogorov-Smirnov test for uniformity of the DHARMa scaled residuals are excluded from cross-validation if residualTest is TRUE. Because the cpglm functions do not produce estimates of standard error, simulation is used to generate the DHARMa residuals if "Tweedie" is the model selected, using the rtweedie distribution from the tweedie library (@tweedie). See the functions in 3.BycatchFunctions.r for details. 
 
-For each model group the best model, as selected by the information criteria, is used to predict the mean and variance of the total bycatch in each year with the exception of the binomial, for which the model predicts to the total number of positive trips. For the binomial model, the best model is used to predict probability of a positive observation in each logbook trip and these are summed to get the total number of positive trips in each year (and in each stratum if further stratification was requested). The variances are calculated by predicting presence or absence (0 or 1) in each trip for each Monte Carlo draw as described above, summing over trips in each Monte Carlo draw, and then calculating mean, variance, and confidence intervals across simulations. See the function makePredictionsSimVar in 3.BycatchFunctions.r for details. The number of positive trips is calculated because, for a very rare species that is never caught more than once in a trip, the number of positive trips would be a good estimate of total bycatch and many of the other models would fail to converge. For more common species, the estimates of total catch are more appropriate, so the results of the binomial model alone are not included in the cross-validation for model comparison.An abundance index based on the binomial distribution is also calculated, if requested.
+For each model group the best model, as selected by the information criteria, is used to predict the mean and variance of the total bycatch in each year with the exception of the binomial, for which the model predicts to the total number of positive trips. For the binomial model, the best model is used to predict probability of a positive observation in each logbook trip and these are summed to get the total number of positive trips in each year (and in each stratum if further stratification was requested). The number of positive trips is calculated because, for a very rare species that is never caught more than once in a trip, the number of positive trips would be a good estimate of total bycatch and many of the other models would fail to converge. For more common species, the estimates of total catch are more appropriate, so the results of the binomial model alone are not included in the cross-validation for model comparison.An abundance index based on the binomial distribution is also calculated, if requested.
 
-For all the other model types, the makePredictionSimVar function calculates the total bycatch in each year, by first predicting the total catch in each trip in the logbook data and then summing over all trips in each stratum. For all the negative binomial models, the log(effort) from the logbook trips is used as an offset in the predictions, along with the values of all the predictor variables, so that the model can predict bycatch in each trip directly. For the Tweedie, the CPUE is predicted for each trip in the logbook data and must be multiplied by effort and summed across trips to get the annual summaries. For delta-gamma models, the predicted bycatch in each trip is the predicted probability of a positive observation from the binomial, time the predicted CPUE from the gamma model, times effor in the trip. For  delta-lognormal models, the variance of the predicted CPUE is needed to bias-correct when converting the mean predicted log(CPUE) to mean predicted CPUE. The variance of the prediction interval for each trip is calculated as the variance of the estimated mean plus the residual variance, and this value is used in the bias correction. The total predicted CPUE is the predicted probability of a positive observation from the binomial times the predicted positive CPUE, and predicted catch is the predicted CPUE times effort. For all models, the predicted total catches summed across trips to get the totals in each stratum. For all models the variance are calculated using the Monte Carlo simulation method described above. 
+For all the other model types, the makePredictionSimVar function calculates the total bycatch in each year, by first predicting the total catch in each trip in the logbook data and then summing over all trips in each stratum. For all the negative binomial models, the log(effort) from the logbook trips is used as an offset in the predictions, along with the values of all the predictor variables, so that the model can predict bycatch in each trip directly. For the Tweedie, normal, and gamma models the CPUE is predicted for each trip in the logbook data and must be multiplied by effort and summed across trips to get the annual summaries. For delta-gamma models, the predicted bycatch in each trip is the predicted probability of a positive observation from the binomial, time the predicted CPUE from the gamma model, times effor in the trip. For  delta-lognormal models, the variance of the predicted CPUE is needed to bias-correct when converting the mean predicted log(CPUE) to mean predicted CPUE. The variance of the prediction interval for each trip is calculated as the variance of the estimated mean plus the residual variance, and this value is used in the bias correction. The total predicted CPUE is the predicted probability of a positive observation from the binomial times the predicted positive CPUE, and predicted catch is the predicted CPUE times effort. For all models, the predicted total catches summed across trips to get the totals in each stratum. For all models the variance are calculated using the Monte Carlo simulation method described above or using a delta method. The delta method variance is not available for the delta-lognormal or delta-gamma models. 
 
 If a user requests an annual abundance index, this is also calculated from the best model in each model group. The annual abundance index is calculated by setting all variables other than year, and any variables required to be included in the index (e.g. region or fleet) to a reference level, which is the mean for numerical variables or the most common value for categorical variables. The index is calculated by predicting the mean CPUE in each year, and its standard error is calculated as the standard error of the mean prediction. For delta-lognormal and delta-gamma models the standard error of the prediciton is calculated from the means and standard errors of the binomial and positive catch models using the method of @Lo.  
 
 Finally, this section combines all the bycatch estimates and index estimates into data frames, and prints out CSV files with the DHARMa residual diagnostics. These are P values for a Kolmogorov-Smirnoff test of whether the DHARMa residuals are uniformly distributed as expected, a test of over-dispersion, a test of zero-inflation (which is meaningless for the delta models, but helpful to see if the negative binomial model and tweedie models adequately model the zeros) and a test of whether there are more outliers than expected. 
 
 ```{r residuals and predictions}
- #Make predictions, residuals, etc. for all models
+#Make predictions, residuals, etc. for all models
  for(mod in 1:length(modelTry)) {
    if(!is.null(modFits[[run]][[modelTry[mod]]])) {
-     if(modelTry[mod] %in% c("Lognormal","Gamma")) {
+     if(modelTry[mod] %in% c("Delta-Lognormal","Delta-Gamma")) {
         modfit1<-modFits[[run]][["Binomial"]]
         modfit2<-modFits[[run]][[modelTry[mod]]]
      } else {
@@ -276,8 +287,23 @@ Finally, this section combines all the bycatch estimates and index estimates int
         modfit2<-NULL
      }
      if(EstimateBycatch) {
-      modPredVals[[run]][[modelTry[mod]]]<-makePredictionsSimVar(modfit1=modfit1,
-         modfit2=modfit2,modtype=modelTry[mod],newdat=logdat)   
+      if(VarCalc=="Simulate" |(VarCalc=="DeltaMethod" & modelTry[mod] %in% c("Delta-Lognormal","Delta-Gamma"))) 
+         if(BigData)
+           modPredVals[[run]][[modelTry[mod]]]<-
+            makePredictionsSimVarBig(modfit1=modfit1,modfit2=modfit2,
+            modtype=modelTry[mod],newdat=logdat) else
+           modPredVals[[run]][[modelTry[mod]]]<-
+            makePredictionsSimVar(modfit1=modfit1,modfit2=modfit2,
+            modtype=modelTry[mod],newdat=logdat)   
+      if(VarCalc=="DeltaMethod" & !modelTry[mod] %in% c("Delta-Lognormal","Delta-Gamma")) 
+           modPredVals[[run]][[modelTry[mod]]]<-
+            makePredictionsDeltaVar(modfit1=modfit1,
+            modtype=modelTry[mod],newdat=logdat) 
+      if(VarCalc=="None") {
+         modPredVals[[run]][[modelTry[mod]]]<-
+            makePredictionsNoVar(modfit1=modfit1,modfit2=modfit2,
+            modtype=modelTry[mod],newdat=logdat)
+      }
      }
      if(EstimateIndex) {
       modIndexVals[[run]][[modelTry[mod]]]<-makeIndexVar(modfit1=modfit1,modfit2=modfit2,modType=modelTry[mod],printOutput=TRUE)   
@@ -297,8 +323,9 @@ Finally, this section combines all the bycatch estimates and index estimates int
  #Combine all predictions, except Binomial
   if(EstimateBycatch) {
    yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=CatEst,Total.se=Catse) %>%
-     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,Year=factor(Year),
-        Total.mean=NA,TotalLCI=NA,TotalUCI=NA)
+     mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,
+        Total.mean=NA,TotalLCI=Total-1.96*Total.se,TotalUCI=Total+1.96*Total.se)
+   if(is.factor(modPredVals[[run]][[1]]$Year)) yearsumgraph$Year<-factor(yearsumgraph$Year)
    allmods[[run]]<-bind_rows(c(modPredVals[[run]],list(Ratio=yearsumgraph)),.id="Source") %>%
      filter(!Source=="Binomial")
    allmods[[run]]$Valid<-ifelse(modelFail[run,match(allmods[[run]]$Source,dimnames(modelFail)[[2]])]=="-" | allmods[[run]]$Source=="Ratio",1,0)
@@ -325,8 +352,7 @@ $$ME =\frac{1}{n}\sum_{i=1}^{n}\hat{y_i}-y_i$$
 The last section of the main loop saves all the results to a file, and uses markdown to make output files that print all the graphics and tables using the file 6.PrintResults.rmd. 
 
 ```{r cross-validation}
-######## Cross validation 10 fold  ####################################
- rmsetab[[run]]<-data.frame(matrix(NA,10,length(modelTry),dimnames=list(1:10,modelTry)))
+ rmsetab[[run]]<-matrix(NA,10,length(modelTry),dimnames=list(1:10,modelTry))
  rmsetab[[run]]<-rmsetab[[run]][,colnames(rmsetab[[run]])!="Binomial"]
  metab[[run]]<-rmsetab[[run]]
  if(DoCrossValidation & length(which(modelFail[run,colnames(modelFail)!="Binomial"]=="-"))>0) {  #Don't do unless at least one model worked
@@ -340,10 +366,11 @@ The last section of the main loop saves all the results to a file, and uses mark
    datin<-datval[datval$cvsample!=i,]
    datout<-datval[datval$cvsample==i,]
    datout$SampleUnits<-rep(1,dim(datout)[1])
-   for(mod in which(!modelTry %in% c("Lognormal","Gamma"))) {
+   for(mod in which(!modelTry %in% c("Delta-Lognormal","Delta-Gamma"))) {
      if(modelFail[run,modelTry[mod]]=="-") {
        if(DredgeCrossValidation) modfit1<-findBestModelFunc(datin,modelTry[mod])[[1]] else
-        modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),modType=modelTry[mod],obsdatval=datin)
+        modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),
+           modType=modelTry[mod],obsdatval=datin)
        if(modelTry[mod]!="Binomial") {
         predcpue<-makePredictions(modfit1,modType=modelTry[mod], newdat = datout)
         rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
@@ -353,10 +380,10 @@ The last section of the main loop saves all the results to a file, and uses mark
        }
      }
    }
-   if("Lognormal" %in% modelTry | "Gamma" %in% modelTry) { 
+   if("Delta-Lognormal" %in% modelTry | "Delta-Gamma" %in% modelTry) { 
      posdat<-filter(datin,pres==1)
-     for(mod in which(modelTry %in% c("Lognormal","Gamma"))) {
-       if(modelFail[run,modelTry[mod]]=="-" & min(summary(posdat$Year))>0) {
+     for(mod in which(modelTry %in% c("Delta-Lognormal","Delta-Gamma"))) {
+       if(modelFail[run,modelTry[mod]]=="-" & !(!is.numeric(posdat$Year) & min(table(posdat$Year))==0)) {
          if(DredgeCrossValidation) modfit1<-findBestModelFunc(posdat,modelTry[mod])[[1]] else
           modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),modType=modelTry[mod],obsdatval=posdat)
          predcpue<-makePredictions(bin1,modfit1,modelTry[mod],datout)
@@ -384,21 +411,21 @@ The last section of the main loop saves all the results to a file, and uses mark
    bestmod[run]<-"None"
  }  
 }
-#Next part commented out for user's guide. 
+#Rest commented out for User Guide 
 # save(list=c("numSp","yearSum","runName", "common", "sp","bestmod",
 #   "predbestmod","indexbestmod","allmods","allindex","modelTable",
-#  "modelSelectTable","modFits","modPredVals"
+#  "modelSelectTable","modFits","modPredVals","VarCalc"
 #  ,"modIndexVals","modelFail","rmsetab","metab",
 #  "residualTab" ,"run","modelTry","EstimateIndex","EstimateBycatch",
 #   "DoCrossValidation","indexVarNames","selectCriteria","sampleUnit",
 #    "modelTry","catchType","catchUnit","residualTab",
-#    "plotValidation","trueVals","trueCols"),
+#    "plotValidation","trueVals","trueCols","startYear"),
 #   file=paste0(outVal,"/","resultsR"))
 # rmarkdown::render("6.PrintResults.rmd",
 #    params=list(outVal=outVal))
 # file.rename(paste0(getwd(),"/6.PrintResults.pdf"),paste0(outVal,"/",common[run],catchType[run],"results.pdf"))
-print(paste(run, common[run],"complete, ",Sys.time()))
-#}
+# print(paste(run, common[run],"complete, ",Sys.time()))
+# }
 ###################### End of analysis loop #######################
 
 #Save R workspace
@@ -428,10 +455,11 @@ cat("Table ", tablenum,". Input data summary.", sep="")
 tablenum<-tablenum+1
 yearSum[[run]] %>%
   mutate_if(is.numeric,   ~ ifelse(abs(.x) > 1, round(.x), round(.x, 2))) %>%
-   kbl(format="latex") %>%
-   kable_styling(
+  remove_rownames() %>%
+  kbl(format="latex") %>%
+  kable_styling(
      latex_options = c("hold_position","scale_down","basic")) %>%
-    print()
+  print()
 #Print modelTable including ModelFail
 cat("Table ",tablenum,". Formula of ",selectCriteria," best model, along whether models were fit successfully. A dash (-) means the model converged. Failure to converge may be from data (not all years had a positive observation for delta models), fit (models did not converge) or CV (bycatch estimates had very large CVs). If cross-validation was done, mean RMSE and mean ME across folds is shown (near zero is better)",sep="")
 tablenum<-tablenum+1
@@ -453,9 +481,9 @@ data.frame(residualTab[[run]]) %>%
     print()
 # Figures of All models together
 if(EstimateBycatch ) {
- if(plotValidation)  plotsumsValidate(filter(allmods[[run]],Valid==1),trueVals,NULL,trueCols[run]) else
+ if(plotValidation)  plotSumsValidate(filter(allmods[[run]],Valid==1),trueVals,NULL,trueCols[run]) else
     plotSums(filter(allmods[[run]],Valid==1),"All",NULL)
-  cat("\n Figure ",fignum,". Total bycatch estimates for all valid models, including a simple unstratified ratio estimator, for ",common[run],", with ",1-CIval," % confidence interval. \n",sep="")
+  cat("\n Figure ",fignum,". Total bycatch estimates for all valid models, including a simple unstratified ratio estimator, for ",common[run],", with ",100*(1-CIval)," % confidence interval. \n",sep="")
   fignum<-fignum+1
 }
 if(EstimateIndex & any(allindex[[run]]$Valid==1)) {
@@ -483,11 +511,12 @@ if(modelFail[run,mod]=="-") {
    temp<-ResidualsFunc(modFits[[run]][[modelTry[mod]]],modelTry[mod],fileName=NULL)
    cat("\n Figure ",fignum,". Residuals for the ",selectCriteria, " best model for ",        modelTry[mod],". \n",sep="")
    fignum<-fignum+1
+  lineText=ifelse(VarCalc=="Simulate","Solid line is the best estimate and dashed line is the mean across simulations.","")
   if(EstimateBycatch) {
    if(plotValidation & modelTry[mod]!="Binomial")  plotSumsValidate(filter(allmods[[run]],Source==modelTry[mod]),trueVals,NULL,trueCols[run]) else
    plotSums(modPredVals[[run]][[modelTry[mod]]],modelTry[mod],fileName=NULL)
-  if(modelTry[mod]=="Binomial")  cat("\n Figure ",fignum,". Estimated total number of positive ",sampleUnit," from Binomial with ",1-CIval,"% confidence interval. Solid line is the best estimate and dashed line is the mean across simulations. \n",sep="") else
-   cat("\n Figure ",fignum,". Estimated total bycatch from ",modelTry[mod]," with  ",1-CIval,"% confidence interval. Solid line is the best estimate and dashed line is the mean across simulations. \n",sep="")
+  if(modelTry[mod]=="Binomial")  cat("\n Figure ",fignum,". Estimated total number of positive ",sampleUnit," from Binomial with ",100*(1-CIval),"% confidence interval.",lineText," \n",sep="") else
+   cat("\n Figure ",fignum,". Estimated total bycatch from ",modelTry[mod]," with ",(1-CIval)*100,"% confidence interval. ",lineText, "\n",sep="")
    fignum<-fignum+1
  }
  if(EstimateIndex) {

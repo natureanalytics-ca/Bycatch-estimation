@@ -1,0 +1,230 @@
+"","SPECIES","COMMON","SCIENTIFIC","CONVERSION"
+"1","1970","KING WHITING","Menticirrhus",1.14
+"2","3446","SEA TROUT,GRAY,UNC","Cynoscion regalis",1.14
+"3","0925","CROAKER,ATLANTIC,UNC","Micropogonias undulatus",1
+"4","1940","KING MACKEREL","Scomberomorus",1.04
+"5","3516","SHARK,HAMMERHEAD","Sphyrnidae",1.39
+"6","3518","SHARK,ATLANTIC SHARPNOSE","Rhizoprionodon terraenovae",1.39
+"7","0230","BLUEFISH","Pomatomus saltatrix",1.09
+"8","0570","COBIA","Rachycentron canadum",1.04
+"9","2210","MENHADEN","Brevoortia",1
+"10","3496","SHARK,SPINNER","Carcharhinus brevipinna",1.39
+"11","0521","BUTTERFISH,UNC","Peprilus",1
+"12","3840","SPANISH MACKEREL","Scomberomorus maculatus",1.15
+"13","0870","CREVALLE","Caranx hippos",1
+"14","0990","CUTLASSFISH,ATLANTIC","Trichiurus lepturus",1
+"15","4060","SPOT","Leiostomus xanthurus",1.04
+"16","0270","BLUE RUNNER","Caranx crysos",1
+"17","1799","JACKS,UNC.","Carangidae",1.04
+"18","4653","TUNA,LITTLE (TUNNY)","Euthynnus alletteratus",1.25
+"19","4410","TENPOUNDER","Elops saurus",1
+"20","1050","DOLPHINFISH","Coryphaena",1.2
+"21","4710","WAHOO","Acanthocybium solandri",1.04
+"22","0180","BARRACUDA","Sphyraena
+",1.11
+"23","3767","SNAPPER,YELLOWTAIL","Ocyurus chrysurus",1.11
+"24","3763","SNAPPER,MUTTON","Lutjanus analis",1.11
+"25","1416","GROUPER,RED","Epinephelus morio",1.18
+"26","1423","GROUPER,GAG","Mycteroperca microlepis",1.18
+"27","3302","PORGY,RED,UNC","Pagrus pagrus",1.04
+"28","3762","SNAPPER,MANGROVE","Lutjanus griseus",1.11
+"29","3764","SNAPPER,RED","Lutjanus campechanus",1.11
+"30","3765","SNAPPER,VERMILION","Rhomboplites aurorubens",1.11
+"31","4561","TRIGGERFISH,GRAY","Balistes capriscus",1.04
+"32","1424","SCAMP","Mycteroperca phenax",1.18
+"33","1440","GRUNTS","Haemulidae",1.04
+"34","3761","SNAPPER,LANE","Lutjanus synagris",1.11
+"35","3312","PORGY,JOLTHEAD","Calamus bajonado",1.04
+"36","3511","SHARK,DOGFISH,SMOOTH","Mustelus canis",1.39
+"37","3495","SHARK,BLACKTIP","Carcharhinus limbatus",1.39
+"38","1415","GROUPER,YELLOWEDGE","Epinephelus flavolimbatus",1.18
+"39","1550","HAKE,ATLANTIC,RED & WHITE","Urophycis",1
+"40","1810","JACK,ALMACO","Seriola rivoliana",1.04
+"41","3306","PORGY,WHITEBONE","Calamus leucosteus",1.04
+"42","3758","SNAPPER,SILK","Lutjanus vivanus",1.11
+"43","4740","GROUPER,WARSAW","Epinephelus nigritus",1.18
+"44","1411","HIND,SPECKLED","Epinephelus drummondhayi",1.18
+"45","1413","HIND,RED","Epinephelus guttatus",1.18
+"46","1817","BANDED RUDDERFISH","Seriola zonata",1.04
+"47","3757","SNAPPER,BLACKFIN","Lutjanus buccanella",1.11
+"48","4563","TRIGGERFISH,QUEEN","Balistes vetula",1.04
+"49","1414","GROUPER,SNOWY","Epinephelus niveatus",1.18
+"50","1812","AMBERJACK,GREATER","Seriola dumerili",1.04
+"51","3360","SEA BASSE,ATLANTIC,BLACK,UNC","Centropristis striata",1.18
+"52","1938","CERO","Scomberomorus regalis",1.04
+"53","1442","MARGATE","Haemulon album",1.04
+"54","1422","GROUPER,BLACK","Mycteroperca bonaci",1.18
+"55","1790","HOGFISH","Lachnolaimus maximus",1
+"56","4470","TILEFISH","Lopholatilus chamaeleonticeps",1.12
+"57","1441","GRUNT,WHITE","Haemulon plumieri",1.04
+"58","4562","TRIGGERFISH,OCEAN","Canthidermis sufflamen",1.04
+"59","1430","GROUPER,NASSAU","Epinephelus striatus",1.18
+"60","1811","JACK,BAR","Caranx ruber",1.04
+"61","3755","SNAPPER,BLACK","Apsilus dentatus",1.11
+"62","1412","HIND,ROCK","Epinephelus adscensionis",1.18
+"63","1417","GROUPER,MARBLED","Epinephelus inermis",1.18
+"64","1426","GROUPER,YELLOWFIN","Mycteroperca venenosa",1.18
+"65","3759","SNAPPER,CUBERA","Lutjanus cyanopterus",1.11
+"66","3770","SNAPPER,QUEEN","Etelis oculatus",1.11
+"67","3455","SEA TROUT,WHITE","Cynoscion arenarius",1
+"68","1815","AMBERJACK,LESSER","Seriola fasciata",1.04
+"69","3772","SNAPPER,MAHOGONY","Lutjanus mahogoni",1.11
+"70","4474","TILEFISH,BLUELINE","Caulolatilus microps",1.12
+"71","2670","PINFISH","Lagodon rhomboides",1
+"72","2720","POMPANO","Trachinotus carolinus",1
+"73","3810","SPADEFISH","Ephippididae",1
+"74","1144","BEARDED BROTULA","Brotula barbata",1
+"75","1814","RAINBOW RUNNER","Elagatis bipinnulata",1
+"76","1444","GRUNT,BLUESTRIPED","Haemulon sciurus",1.04
+"77","0130","BIGEYE SCAD","Selar crumenophthalmus",1
+"78","3308","PORGY,KNOBBED","Calamus nodosus",1.04
+"79","2520","PARROTFISH","Scaridae",1.11
+"80","5260","FINFISHES,UNC FOR FOOD","Osteichthyes",1
+"81","7300","LOBSTER,SPINY","Panulirus argus",3.04
+"82","3497","SHARK,BULL","Carcharhinus leucas",1.39
+"83","3513","SHARK,SANDBAR","Carcharhinus plumbeus",1.39
+"84","3515","SHARK,TIGER","Galeocerdo cuvier",1.39
+"85","3483","SHARK,BONNETHEAD","Sphyrna tiburo",1.39
+"86","2959","SCORPIONFISH-THORNYHEADS","Scorpaenidae",1
+"87","7180","CRAB,STONE (UNC CLAWS)","Menippe mercenaria",2
+"88","4658","TUNA,BLACKFIN","Thunnus atlanticus",1.25
+"89","3485","SHARK,BLACKNOSE","Carcharhinus acronotus",1.39
+"90","3517","SHARK,LEMON","Negaprion brevirostris",1.39
+"91","1803","JACK, YELLOW","Caranx bartholomaei",1.04
+"92","0140","BIGEYE","Priacanthus arenatus",1.04
+"93","4120","SQUIRRELFISHES","Holocentridae",1
+"94","1235","FLOUNDER,ATLANTIC & GULF,UNC","Pleuronectiformes",1
+"95","4651","TUNA,ALBACORE","Thunnus alalunga",1.11
+"96","3560","SHEEPSHEAD,ATLANTIC","Archosargus probatocephalus",1.14
+"97","4655","TUNA,YELLOWFIN","Thunnus albacares",1.25
+"98","0193","BARRELFISH","Hyperoglyphe perciformis",1
+"99","1420","GROUPER,MISTY","Epinephelus mystacinus",1.18
+"100","3374","LONGTAIL BASS","Hemanthias leptus",1.18
+"101","4478","TILEFISH,SAND","Malacanthus plumieri",1.12
+"102","2347","MULLETS","Mugilidae",1.14
+"103","1427","CREOLE-FISH","Paranthias furcifer",1.18
+"104","3481","SHARK,FINETOOTH","Carcharhinus isodon",1.39
+"105","3475","SHARK,UNC,FINS","Squaliformes",1
+"106","1425","GROUPER,YELLOWMOUTH","Mycteroperca interstitialis",1.18
+"107","3110","SAND PERCH","Diplectrum formosum",1
+"108","2310","MOONFISH,ATLANTIC","Selene setapinnis",1
+"109","2420","BLACK BELLIED ROSEFISH","Helicolenus dactylopterus",1
+"110","1445","GRUNT,FRENCH","Haemulon flavolineatum",1.04
+"111","4590","TRIPLETAIL","Lobotes surinamensis",1
+"112","3521","SHARK,DOGFISH,SPINY","Squalus acanthias",1.39
+"113","3295","SCUPS OR PORGIES,UNC","Sparidae",1.04
+"114","1428","GRAYSBY","Epinephelus cruentatus",1.18
+"115","0330","BONITO,ATLANTIC","Sarda sarda",1.15
+"116","1180","FILEFISH (dup 4560 recode)","Balistidae",1.04
+"117","1081","DRUM,BLACK","Pogonias cromis",1.14
+"118","4652","TUNA,BLUEFIN,UNC","Thunnus thynnus",1.25
+"119","3314","PINFISH,SPOTTAIL","Diplodus holbrooki",1.04
+"120","1807","AFRICAN POMPANO","Alectis ciliaris",1
+"121","0931","DRUMS","Sciaenidae",1.14
+"122","3263","SPINYCHEEK SCORPIONFISH","Neomerinthe hemingwayi",1
+"123","3523","SHARK,SCALLOPED HAMMERHEAD","Sphyrna lewini",1
+"124","3524","SHARK,GREAT HAMMERHEAD","Sphyrna mokarran",1.39
+"125","1443","MARGATE,BLACK","Anisotremus surinamensis",1.04
+"126","3580","SHARK,MAKO UNC","Isurus",1.39
+"127","3768","SNAPPERS,UNC","Lutjanidae",1.11
+"128","4656","TUNA,UNC","Thunnus",1.25
+"129","1140","EELS,UNC","Anguilliformes",1.11
+"130","4560","TRIGGERFISHES","Balistidae",1.04
+"131","3493","SHARK,SILKY","Carcharhinus falciformis",1.39
+"132","3500","SHARK,THRESHER UNC","Alopias",1.39
+"133","2990","RUDDERFISH (SEA CHUBS)","Kyphosidae",1
+"134","5290","FINFISHES,UNC,BAIT,ANIMAL FOOD","Osteichthyes",1
+"135","3754","SNAPPER,DOG","Lutjanus jocu",1.11
+"136","3503","SHARK,DOGFISH,UNC","Squalidae",1.2
+"137","3680","SKIPPERS","Tylosurus",1
+"138","2550","PERMIT","Trachinotus falcatus",1
+"139","0120","ANGLERFISH,UNCL","Lophius americanus",2
+"140","7360","SHRIMP,ATLANTIC & GULF,MARINE,UNC","Pandalus borealis",1.6
+"141","3505","SHARK,BONITO(SHORTFIN MAKO)","Isurus oxyrinchus",1.39
+"142","3760","SNAPPER,GRAY","Lutjanus griseus",1.12
+"143","3371","SPANISH FLAG","Gonioplectrus hispanus",1
+"144","1446","GRUNT,TOMTATE","Haemulon aurolineatum",1.04
+"145","1410","GROUPERS","Serranidae",1.18
+"146","3756","WENCHMAN","Pristipomoides aquilonaris",1.11
+"147","1800","JACK,HORSE-EYE","Caranx latus",1.18
+"148","3771","SNAPPER,SCHOOLMASTER","Lutjanus apodus",1.11
+"149","3522","SHARK,SMOOTH HAMMERHEAD","Sphyrna zygaena",1
+"150","7860","OCTOPUS","Octopodidae",1.11
+"151","4654","TUNA,SKIPJACK","Euthynnus pelamis",1.25
+"152","4320","SWORDFISH","Xiphias gladius",1.39
+"153","1350","GOATFISHES","Mullidae",1
+"154","4380","TAUTOG","Tautoga onitis",1
+"155","0192","BLACK DRIFTFISH","Hyperoglyphe bythites",1
+"156","2860","RAYS,UNC","Rajiformes",1
+"157","3510","SHARK,BIGEYE THRESHER","Alopias superciliosus",1.39
+"158","0820","COD,ATLANTIC,UNC","Gadus morhua",1.12
+"159","3447","SEA TROUT,SPOTTED","Cynoscion nebulosus",1.15
+"160","7190","CRAB,UNC","Decapoda",1
+"161","3474","SHAD,UNC","Alosa sapidissima",1.14
+"162","1138","EELS,CUSK","Ophidiidae",1.11
+"163","3362","SEA BASS,ROCK","Centropristis philadelphica",1.18
+"164","1730","HICKORY SHAD","Alosa mediocris",1.14
+"165","0960","CUSK","Brosme brosme",1.12
+"166","1142","EEL,CONGER","Conger oceanicus",1.11
+"167","0147","GLASSEYE SNAPPER","Priacanthus cruentatus",1.04
+"168","2765","PUDDINGWIFE (WRASSE)","Halichoeres radiatus",1
+"169","0030","AMBERJACK","Seriola",1.04
+"170","2162","MACKEREL,UNC. (Scomber)","Scomber",1.15
+"171","1141","EEL,AMERICAN","Anguilla rostrata",1.11
+"172","1143","EEL,MORAYS","Muraenidae",1.11
+"173","3305","PORGY,GRASS","Calamus arctifrons",1.04
+"174","3574","SHARK,THRESHER PELAGIC","Alopias pelagicus",1.39
+"175","0090","ANGELFISHES","Chaetodontidae",1
+"176","5131","WRECKFISH","Polyprion americanus",1.11
+"177","3508","SHARK,UNC","Chondrichthyes",1.39
+"178","4657","TUNA,BIGEYE","Thunnus obesus",1.25
+"179","0190","NEEDLEFISH,ATLANTIC","Strongylura marina",1.4
+"180","1480","HADDOCK,UNC","Melanogrammus aeglefinus",1.12
+"181","3501","SHARK,PORBEAGLE","Lamna nasus",1.39
+"182","3380","SEA CATFISH","Ariidae",1.12
+"183","7280","LOBSTER,SLIPPER(BULLDOZER)","Scyllaridae",3.04
+"184","2250","MOJARRAS","Gerreidae",1
+"185","2501","ESCOLAR","Lepidocybium flavobrunneum",1
+"186","1429","CONEY","Epinephelus fulvus",1.18
+"187","1805","JACK,BLACK","Caranx lugubris",1.04
+"188","1082","DRUM,RED","Sciaenops ocellatus",1.14
+"189","1320","FRIGATE MACKEREL","Auxis thazard",1
+"190","3299","PORGY,LONGSPINE","Stenotomus caprinus",1.04
+"191","3375","SEA BASS,BANK","Centropristis ocyurus",1.18
+"192","0150","BALLYHOO","Hemiramphus brasiliensis",1
+"193","7240","HORSESHOE CRAB","Limulus polyphemus",1
+"194","2502","OILFISH","Ruvettus pretiosus",1.04
+"195","3310","PORGY,LITTLEHEAD","Calamus proridens",1.04
+"196","3509","SHARK,THRESHER","Alopias vulpinus",1.39
+"197","4480","TILEFISH,UNCLASSIFIED","Malacanthidae",1.12
+"198","2760","PUFFERS","Tetraodontidae",1.12
+"199","1211","FLOUNDER,ATLANTIC,SUMMER,UNC    (FLUKE)","Paralichthys dentatus",1.15
+"200","4265","SURGEONFISHES","Acanthuridae",1.72
+"201","3514","SHARK,DUSKY","Carcharhinus obscurus",1.39
+"202","3512","SHARK,WHITE","Carcharodon carcharias",1.39
+"203","2177","MARLIN,WHITE","Tetrapturus albidus",1
+"204","1418","GROUPER,BROOMTAIL","Mycteroperca xenarcha",1.18
+"205","2580","PIGFISH","Orthopristis chrysoptera",1.04
+"206","2710","POMFRETS","Bramidae",1
+"207","0010","ALEWIFE","Alosa",1
+"208","3480","SHARK,NURSE","Ginglymostoma cirratum",1.39
+"209","2750","PORKFISH","Anisotremus virginicus",1.04
+"210","3410","SEA ROBINS","Triglidae",1.12
+"211","8030","SQUIDS,UNC","Loliginidae",1
+"212","0145","SHORT BIGEYE","Pristigenys alta",1.04
+"213","4500","TOADFISHES","Batrachoididae",1
+"214","1452","GRUNT,SAILORS CHOICE","Haemulon parra",1.04
+"215","0300","BONEFISH","Albula vulpes",1
+"216","7750","SNAILS(CONCHS)","Strombus",1
+"217","2400","OCEAN PERCH,ATLANTIC (REDFISH)","Sebastes marinus",1.33
+"218","7102","CRAB,GOLDEN","Geryon fenneri",1
+"219","2180","MARLIN,UNC","Istiophoridae",1
+"220","3575","SHARK,GRAY SMOOTHHOUND","Mustelus californicus",1.39
+"221","3482","SHARK,SAND TIGER","Odontaspis taurus",1.39
+"222","1447","GRUNT, COTTONWICK","Haemulon melanurum",1.04
+"223","3502","SHARK,LONGFIN MAKO","Isurus paucus",1.39
+"224","4180","STRIPED BASS,UNC","Morone saxatilis",1.14
+"225","3650","SKATES","Rajidae",1.12
+"226","3504","SHARK,BLUE","Prionace glauca",1.39
+"227","3479","SHARK,SMALLTAIL","Carcharhinus porosus",1.39
+"228","3026","SAILFISH","Istiophorus platypterus",1

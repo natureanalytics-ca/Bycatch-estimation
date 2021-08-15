@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
 ```{r load data,  results=FALSE}
-# outVal<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code/outputSimulated data example/Simulated species dead discard/"
+#outVal<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputSimulated factor year no var/Simulated species dead discard/"
 load(paste0(outVal,"/","resultsR"))
 library(tidyverse)
 library(kableExtra)
@@ -68,7 +68,7 @@ data.frame(residualTab[[run]]) %>%
 if(EstimateBycatch ) {
  if(plotValidation)  plotSumsValidate(filter(allmods[[run]],Valid==1),trueVals,NULL,trueCols[run]) else
     plotSums(filter(allmods[[run]],Valid==1),"All",NULL)
-  cat("\n Figure ",fignum,". Total bycatch estimates for all valid models, including a simple unstratified ratio estimator, for ",common[run],", with ",1-CIval," % confidence interval. \n",sep="")
+  cat("\n Figure ",fignum,". Total bycatch estimates for all valid models, including a simple unstratified ratio estimator, for ",common[run],", with ",100*(1-CIval)," % confidence interval. \n",sep="")
   fignum<-fignum+1
 }
 if(EstimateIndex & any(allindex[[run]]$Valid==1)) {
@@ -96,11 +96,12 @@ if(modelFail[run,mod]=="-") {
    temp<-ResidualsFunc(modFits[[run]][[modelTry[mod]]],modelTry[mod],fileName=NULL)
    cat("\n Figure ",fignum,". Residuals for the ",selectCriteria, " best model for ",        modelTry[mod],". \n",sep="")
    fignum<-fignum+1
+  lineText=ifelse(VarCalc=="Simulate","Solid line is the best estimate and dashed line is the mean across simulations.","")
   if(EstimateBycatch) {
    if(plotValidation & modelTry[mod]!="Binomial")  plotSumsValidate(filter(allmods[[run]],Source==modelTry[mod]),trueVals,NULL,trueCols[run]) else
    plotSums(modPredVals[[run]][[modelTry[mod]]],modelTry[mod],fileName=NULL)
-  if(modelTry[mod]=="Binomial")  cat("\n Figure ",fignum,". Estimated total number of positive ",sampleUnit," from Binomial with ",1-CIval,"% confidence interval. Solid line is the best estimate and dashed line is the mean across simulations. \n",sep="") else
-   cat("\n Figure ",fignum,". Estimated total bycatch from ",modelTry[mod]," with  ",1-CIval,"% confidence interval. Solid line is the best estimate and dashed line is the mean across simulations. \n",sep="")
+  if(modelTry[mod]=="Binomial")  cat("\n Figure ",fignum,". Estimated total number of positive ",sampleUnit," from Binomial with ",100*(1-CIval),"% confidence interval.",lineText," \n",sep="") else
+   cat("\n Figure ",fignum,". Estimated total bycatch from ",modelTry[mod]," with ",(1-CIval)*100,"% confidence interval. ",lineText, "\n",sep="")
    fignum<-fignum+1
  }
  if(EstimateIndex) {

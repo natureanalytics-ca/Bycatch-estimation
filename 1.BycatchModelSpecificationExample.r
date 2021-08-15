@@ -2,11 +2,11 @@
 # This will automatically be saved in the output directory as documentation.
 
 #Specify directory where R files are found. 
-baseDir<-"C:/Users/ebabcock/Dropbox/bycatch project/Current R code"
+baseDir<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code"
 setwd(baseDir)
 
 #Give a name to the run, which will be used to set up a directory for the the outputs
-runName<-"Simulated data example"
+runName<-"Simulated factor year delta var"
 
 # What would you like to estimate?
 # You may calculate either an annual abundance index, or total bycatch, or both
@@ -67,12 +67,13 @@ indexModel<-formula(y~Year)
 #Variables not in this list will retain their original format
 factorNames=c("Year","season")
 
-#Specify which observation error models to try. Options are delta-lognormal, delta-gamma, negative 
-#binomial and tweedie, specified as: "Lognormal" for delta lognormal,"Gamma" for delta gamm,"NegBin" for negative binomial 
-#using glm.mb in the MASS library, "Tweedie" for cpglm, and TMB nbinom1, nbinom2, and tweedie in the glmmTMB 
-#library, specified with "TMB" followed by the model type. Binomial is run
+#Specify which observation error models to try. Options are: "Binomial", "Normal","Lognormal",
+#"Gamma","Delta-Lognormal", #"Delta-Gamma", "NegBin" for Negative binomial" using glm.mb in the MASS library,
+#"Tweedie" for Tweedie GLM from the cpglm library, and "TMBnbinom1", "TMBnbinom2", and "TMBtweedie" for
+# negative binomial 1, negative binomial 2 and Tweedie from the GLMMTMB library. Binomial is run
 #automatically as part of the delta models if either of them are selected.
-modelTry<-c("Binomial","Lognormal","Gamma","NegBin","Tweedie","TMBnbinom1","TMBnbinom2","TMBtweedie")
+
+modelTry<-c("Binomial","Normal","Lognormal","Gamma","Delta-Lognormal","Delta-Gamma","NegBin","Tweedie","TMBnbinom1","TMBnbinom2","TMBtweedie")
 
 #Specify preferred information criteria for model selection
 # Choices are AICc, AIC and BIC. 
@@ -82,14 +83,19 @@ selectCriteria<-"BIC"
 #or unbalanced dataset. DredgeCrossValidation specifies whether to use information criteria 
 #to find the best model in cross validation, using the dredge function, or just keep the same model formula. 
 #Do not use dredge for very large datasets, as the run will be slow.  
-DoCrossValidation<-TRUE
-DredgeCrossValidation<-TRUE
+DoCrossValidation<-FALSE
+DredgeCrossValidation<-FALSE
 
 #Specify whether to exclude models that fail the DHARMa residuals test. 
 ResidualTest<-FALSE
 
 #Specify confidence interval for total bycatch estimates
 CIval<-0.05 #Should be the alpha level, e.g. 0.05 for 95%
+
+# Variance calculation method. Simulate will not work with a large number of sample units
+# in the logbook data. The delta method for variance calculation is not implemented
+# for the delta-lognormal or delta-gamma methods. 
+VarCalc<-c("Simulate","DeltaMethod","None")[2] 
 
 # Specify whether to save R workspace. This should be true unless you 
 # don't have space on your disk. Also specify whether to use parallel processing to

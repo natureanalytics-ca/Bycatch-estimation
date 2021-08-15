@@ -62,6 +62,19 @@ if(EstimateBycatch) {
  if(logEffort==sampleUnit) logdat<-mutate(logdat,Effort=SampleUnits)
 }
 
+# See if data set is large
+BigData<-ifelse(sum(logdat$SampleUnits)>10000,TRUE,FALSE)
+#Add stratum designation and check sample size in strata
+if(length(requiredVarNames)>1) {
+ logdat$strata<-apply( x[ , requiredVarNames ] , 1 , paste , collapse = "-" ) 
+} else {
+ logdat$strata <- pull(logdat,var=requiredVarNames)
+}
+if(max(tapply(logdat$SampleUnits,logdat$strata,sum))>20000) {
+  print("Cannot calculate variance for large number of logbook sample units")
+  VarCalc<-"None"
+}  
+
 #newDat for making index
 newDat<-distinct_at(obsdat,vars(all_of(indexVarNames)),.keep_all=TRUE) %>%
  arrange(Year) %>%
