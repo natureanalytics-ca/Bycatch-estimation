@@ -3,15 +3,24 @@
 #Alter the workspaces loaded and their names as needed
 
 #Load multiple workspace and rename the predictions for combination
-load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputSimulated factor year delta var/R.workspace.rData")
-Delta<-allmods[[1]]
-load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputSimulated factor year sim var/R.workspace.rData")
-Simvar<-allmods[[1]]
-load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputSimulated factor year no var/R.workspace.rData")
-Novar<-allmods[[1]]
+#load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputSimulated factor year sim big/R.workspace.rData")
+#BigSim<-allmods[[1]]
+load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputKept Reef LL delta var/R.workspace.rData")
+Delta1<-allmods
+summary(Delta)
+load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputKept Reef LL sim var/R.workspace.rData")
+Simvar1<-allmods
+summary(Simvar)
+load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputKept Reef LL no var/R.workspace.rData")
+Novar1<-allmods
+summary(Novar)
 
 #Combine predictions
-allmods<-bind_rows(DeltaMethod=Delta,Simulated=Simvar,Novar=Novar,.id="Type")
+runnum<-3
+x<-list(DeltaMethod=Delta1[[runnum]],Simulated=Simvar1[[runnum]],Novar=Novar1[[runnum]])
+summary(x)
+allmods<-bind_rows(DeltaMethod=Delta1[[runnum]],Simulated=Simvar1[[runnum]],Novar=Novar1[[runnum]],.id="Type")
+#allmods<-bind_rows(DeltaMethod=Delta,Simulated=Simvar,Novar=Novar,BigSim=BigSim,.id="Type")
 allmods$Source=paste(allmods$Type,allmods$Source)
 #Adjust numeric year if needed
 #allmods$Year[allmods$Year<startYear]=allmods$Year[allmods$Year<startYear]+startYear
@@ -31,6 +40,21 @@ plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Delta-Gamma","Novar 
 
 plotSums(filter(allmods,Valid==1 & Source %in% c("DeltaMethod Lognormal","Simulated Lognormal","Novar Lognormal") ),"All",NULL)
 
-plotSums(filter(allmods,Valid==1 & Source %in% c("DeltaMethod Normal","Simulated Normal","Novar Normal") ),"All",NULL)
+
+## big is okay
+
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated NegBin","BigSim NegBin") ),"All",NULL)
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated NegBin","Simulated TMBnbinom2","BigSim TMBnbinom2","BigSim NegBin") ),"All",NULL)
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Tweedie","BigSim Tweedie") ),"All",NULL)
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Tweedie", "Simulated TMBtweedie","BigSimTweedie","BigSim TMBtweedie","BigSim Tweedie") ),"All",NULL)
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated TMBnbinom1","BigSim TMBnbinom1") ),"All",NULL)
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Gamma","BigSim Gamma") ),"All",NULL)
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Lognormal","BigSim Lognormal") ),"All",NULL)
+
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Delta-Lognormal","BigSim Delta-Lognormal") ),"All",NULL)
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Delta-Gamma","BigSim Delta-Gamma") ),"All",NULL)
 
 
+
+plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Tweedie","Novar Tweedie") ),"All",NULL)
+write.csv(filter(allmods,Valid==1 & Source %in% c("DeltaMethod Tweedie","Simulated Tweedie", "DeltaMethod TMBtweedie", "Simulated TMBtweedie","NovarTweedie","Novar TMBtweedie","Novar Tweedie") ),"temp.csv")

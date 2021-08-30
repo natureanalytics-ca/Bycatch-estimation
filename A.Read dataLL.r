@@ -6,7 +6,7 @@ library(haven)
 library(ggplot2)
 
 #Set the working director to the correct location
-setwd("C:/Users/ebabcock/dropbox/Bycatch Project/Current R code")
+setwd("C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code")
 #Get Beth's functions
 source("3.BycatchFunctions.r")
 

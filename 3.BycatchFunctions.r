@@ -3,7 +3,7 @@
 # Basic ratio estimator with variance (Cochran)
 # x, y and g are vectors giving the effort/catch, bycatch and stratum of 
 # each observed sample unit. X is the total effort/catch by stratum 
-# N is the total number of sample units by stratum, if available, othewise total effort 
+# N is the total number of sample units by stratum, if available, otherwise total effort 
 # Output is mean and standard error of bycatch by stratum and the total 
 # bycatch with SE. Assumes unobserved strata have zero catch
 ratio.func= function(x,y,g,X,N,G) {
@@ -505,7 +505,7 @@ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit)>10000)  
    }
    b=model.matrix(formula(modfit2),data=newdat)
   }
-  #Get predictions
+  #Get predictions sim
   if(modtype == "Binomial") {
       allpred<-cbind(newdat,response1) %>%
         mutate(Total=fit,TotalVar=se.fit^2+fit*(1-fit))
@@ -562,11 +562,12 @@ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit)>10000)  
         size=modfit1$theta))  #Simulate negative binomial data
   }
   if(modtype=="Tweedie") {
-      allpred<-cbind(newdat,response1)   %>%
+      allpred=cbind(newdat,response1)   %>%
         mutate(Total=Effort*fit,
                TotalVar=Effort^2*(se.fit^2+modfit1$phi*fit^modfit1$p))
-      sim=replicate(nsim,rtweedie(nObs,power=modfit1$p,
-        mu=as.vector(exp(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1)))),phi=modfit1$phi))*newdat$Effort
+       sim=replicate(nsim,rtweedie(nObs,power=modfit1$p,
+        mu=as.vector(exp(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1)))),
+         phi=modfit1$phi))*newdat$Effort 
   }
   if(modtype=="TMBnbinom1") {
       allpred<-cbind(newdat,response1)  %>%
@@ -579,15 +580,13 @@ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit)>10000)  
         mutate(Total=fit,
                TotalVar=se.fit^2+fit+fit^2/sigma(modfit1))
       sim = replicate(nsim,rnbinom(nObs,mu=exp(a %*% mvrnorm(1,fixef(modfit1)[[1]],
-        vcov(modfit1)[[1]]))*newdat$Effort, size=sigma(modfit1)))  #Simulate negative binomial data
+        vcov(modfit1)[[1]]))*newdat$Effort, size=sigma(modfit1)))  
   }
   if(modtype=="TMBtweedie") {
       allpred<-cbind(newdat,response1)  %>%
         mutate(Total=Effort*fit,
                TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))
-      sim=replicate(nsim,rtweedie(nObs,power=glmmTMB:::.tweedie_power(modfit1),
-        mu=as.vector(exp(a %*% mvrnorm(1,fixef(modfit1)[[1]],vcov(modfit1)[[1]]))),
-        phi=sigma(modfit1)))*newdat$Effort
+       sim=replicate(nsim, simulateTMBTweedieDraw(modfit1,nObs,a,newdat$Effort) )
   }
   stratatotal<-allpred %>%
       group_by_at(all_of(requiredVarNames)) %>%
@@ -675,34 +674,12 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
    }
    b=model.matrix(formula(modfit2),data=newdat)
   }
-  #Get predictions
+  #Get predictions sim
   if(modtype == "Binomial") {
       allpred<-cbind(newdat,response1) %>%
         mutate(Total=fit,TotalVar=se.fit^2+fit*(1-fit))
       sim=replicate(nsim,rbinom(nObs,1,ilogit(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1))) ) )
      }
-  if(modtype == "Delta-Lognormal") {
-      allpred<-cbind(newdat,response1,response2) %>%
-        mutate(pos.cpue=lnorm.mean(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
-               pos.cpue.se=lnorm.se(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
-               prob.se=sqrt(se.fit^2+fit*(1-fit))) %>%
-        mutate(Total=Effort*fit*pos.cpue,
-               TotalVar=Effort^2*lo.se(fit,prob.se,pos.cpue,pos.cpue.se)^2)
-      sim1=replicate(nsim,rbinom(nObs,1,ilogit(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1))) ) )
-      sim2=replicate(nsim,newdat$Effort*exp(rnorm(nObs,b %*%
-           mvrnorm(1,coef(modfit2),vcov(modfit2)),sigma(modfit2)) ) )
-      sim=sim1*sim2
-  }
-  if(modtype == "Delta-Gamma") {
-      allpred<-cbind(newdat,response1,response2) %>%
-        mutate(pos.cpue.se=sqrt(se.fit2^2+fit2*gamma.shape(modfit2)[[1]]),
-               prob.se=sqrt(se.fit^2+fit*(1-fit))) %>%
-        mutate(Total=Effort*fit*fit2,
-               TotalVar=Effort^2*lo.se(fit,prob.se,fit2,pos.cpue.se)^2)
-      sim1=replicate(nsim,rbinom(nObs,1,ilogit(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1))) ) )
-      sim2=replicate(nsim,newdat$Effort*simulateGammaDraw(modfit2,nObs,b) )
-      sim=sim1*sim2
-  }
   if(modtype=="Normal") {
       allpred<-cbind(newdat,response1)   %>%
         mutate(Total=Effort*fit,
@@ -725,6 +702,28 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
                TotalVar=Effort^2*(se.fit^2+fit*gamma.shape(modfit1)[[1]]))
       sim=replicate(nsim,newdat$Effort*(simulateGammaDraw(modfit1,nObs,a)-0.1) )
   }
+  if(modtype == "Delta-Lognormal") {
+      allpred<-cbind(newdat,response1,response2) %>%
+        mutate(pos.cpue=lnorm.mean(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
+               pos.cpue.se=lnorm.se(fit2,sqrt(se.fit2^2+sigma(modfit2)^2)),
+               prob.se=sqrt(se.fit^2+fit*(1-fit))) %>%
+        mutate(Total=Effort*fit*pos.cpue,
+               TotalVar=Effort^2*lo.se(fit,prob.se,pos.cpue,pos.cpue.se)^2)
+      sim1=replicate(nsim,rbinom(nObs,1,ilogit(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1))) ) )
+      sim2=replicate(nsim,newdat$Effort*exp(rnorm(nObs,b %*%
+           mvrnorm(1,coef(modfit2),vcov(modfit2)),sigma(modfit2)) ) )
+      sim=sim1*sim2
+  }
+  if(modtype == "Delta-Gamma") {
+      allpred<-cbind(newdat,response1,response2) %>%
+        mutate(pos.cpue.se=sqrt(se.fit2^2+fit2*gamma.shape(modfit2)[[1]]),
+               prob.se=sqrt(se.fit^2+fit*(1-fit))) %>%
+        mutate(Total=Effort*fit*fit2,
+               TotalVar=Effort^2*lo.se(fit,prob.se,fit2,pos.cpue.se)^2)
+      sim1=replicate(nsim,rbinom(nObs,1,ilogit(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1))) ) )
+      sim2=replicate(nsim,newdat$Effort*simulateGammaDraw(modfit2,nObs,b) )
+      sim=sim1*sim2
+  }
   if(modtype=="NegBin") {
       allpred<-cbind(newdat,response1)   %>%
         mutate(Total=fit,TotalVar=se.fit^2+fit+fit^2/modfit1$theta)
@@ -732,11 +731,12 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
         size=modfit1$theta))  #Simulate negative binomial data
   }
   if(modtype=="Tweedie") {
-      allpred<-cbind(newdat,response1)   %>%
+      allpred=cbind(newdat,response1)   %>%
         mutate(Total=Effort*fit,
                TotalVar=Effort^2*(se.fit^2+modfit1$phi*fit^modfit1$p))
-      sim=replicate(nsim,rtweedie(nObs,power=modfit1$p,
-        mu=as.vector(exp(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1)))),phi=modfit1$phi))*newdat$Effort
+       sim=replicate(nsim,rtweedie(nObs,power=modfit1$p,
+        mu=as.vector(exp(a %*% mvrnorm(1,coef(modfit1),vcov(modfit1)))),
+         phi=modfit1$phi))*newdat$Effort 
   }
   if(modtype=="TMBnbinom1") {
       allpred<-cbind(newdat,response1)  %>%
@@ -749,15 +749,13 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
         mutate(Total=fit,
                TotalVar=se.fit^2+fit+fit^2/sigma(modfit1))
       sim = replicate(nsim,rnbinom(nObs,mu=exp(a %*% mvrnorm(1,fixef(modfit1)[[1]],
-        vcov(modfit1)[[1]]))*newdat$Effort, size=sigma(modfit1)))  #Simulate negative binomial data
+        vcov(modfit1)[[1]]))*newdat$Effort, size=sigma(modfit1)))  
   }
   if(modtype=="TMBtweedie") {
       allpred<-cbind(newdat,response1)  %>%
         mutate(Total=Effort*fit,
                TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))
-      sim=replicate(nsim,rtweedie(nObs,power=glmmTMB:::.tweedie_power(modfit1),
-        mu=as.vector(exp(a %*% mvrnorm(1,fixef(modfit1)[[1]],vcov(modfit1)[[1]]))),
-        phi=sigma(modfit1)))*newdat$Effort
+       sim=replicate(nsim, simulateTMBTweedieDraw(modfit1,nObs,a,newdat$Effort) )
   }
   stratatotal<-allpred %>%
       group_by_at(all_of(requiredVarNames)) %>%
@@ -772,6 +770,7 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
          TotalVar=var(c_across(as.character(1:nsim))),
          TotalLCI=quantile(c_across(as.character(1:nsim)),p=CIval/2),
          TotalUCI=quantile(c_across(as.character(1:nsim)),p=1-CIval/2)) %>%
+       mutate(TotalLCI=ifelse(TotalLCI<0,0,TotalLCI),Total.mean=ifelse(TotalLCI<0,0,Total.mean)) %>%
        mutate(Total.se=sqrt(TotalVar))  %>%
        mutate(Total.cv=Total.se/Total.mean)  %>%
         dplyr::select(-one_of(as.character(1:nsim)))
@@ -784,6 +783,7 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
          TotalVar=var(c_across(as.character(1:nsim))),
          TotalLCI=quantile(c_across(as.character(1:nsim)),p=CIval/2),
          TotalUCI=quantile(c_across(as.character(1:nsim)),p=1-CIval/2)) %>%
+       mutate(TotalLCI=ifelse(TotalLCI<0,0,TotalLCI),Total.mean=ifelse(TotalLCI<0,0,Total.mean)) %>%
        mutate(Total.se=sqrt(TotalVar))  %>%
        mutate(Total.cv=Total.se/Total.mean)  %>%
         dplyr::select(-one_of(as.character(1:nsim)))
@@ -816,6 +816,17 @@ simulateNegBin1Draw<-function(modfit,nObs,b,Effort) {
     thetaval<-sigma(modfit)
     rnbinom(nObs,mu=muval,size=muval/thetaval) 
 }
+
+simulateTMBTweedieDraw<-function(modfit,nObs,b,Effort) {
+    muval<-as.vector(exp(a %*% mvrnorm(1,fixef(modfit)[[1]],vcov(modfit)[[1]])))
+    if(all(muval>0)) {
+     simval<-rtweedie(nObs,power=glmmTMB:::.tweedie_power(modfit),
+         mu=muval,phi=sigma(modfit))*Effort  } else  {
+     simval=rep(NA,nObs)
+         }
+    simval
+}
+
 
 
 #Function to plot either total positive trips (binomial) or total catch/bycatch (all other models)
@@ -1156,10 +1167,12 @@ makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE) {
    deriv =  rep(1,nrow(newdat))
   }
   if(modtype == "Lognormal" ) {
-    temp = predict(modfit1,newdata=newdat,se.fit=TRUE)
-    predval = (lnorm.mean(temp$fit,sqrt(temp$se.fit^2+sigma(modfit1)^2))-0.1)*newdat$Effort
-    residvar = lnorm.se(temp$fit,sqrt(temp$se.fit^2+sigma(modfit1)^2))^2*newdat$Effort^2
-    deriv =  exp(temp$fit)*newdat$Effort
+     temp = predict(modfit1,newdata=newdat,se.fit=TRUE)
+     predval = (lnorm.mean(temp$fit,sqrt(temp$se.fit^2+sigma(modfit1)^2))-0.1)*newdat$Effort
+    # residvar = lnorm.se(temp$fit,sqrt(temp$se.fit^2+sigma(modfit1)^2))^2*newdat$Effort^2
+    # deriv =  exp(temp$fit)*newdat$Effort
+     deriv = (lnorm.mean(temp$fit,sqrt(temp$se.fit^2+sigma(modfit1)^2)))*newdat$Effort
+     residvar = lnorm.se(temp$fit,sqrt(temp$se.fit^2+sigma(modfit1)^2))^2*newdat$Effort^2
   }
   if(modtype == "Gamma" ) {
    predval = (predval-0.1) * newdat$Effort
