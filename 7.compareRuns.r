@@ -16,7 +16,8 @@ Novar1<-allmods
 summary(Novar)
 
 #Combine predictions
-runnum<-3
+runnum<-1
+run<-1
 x<-list(DeltaMethod=Delta1[[runnum]],Simulated=Simvar1[[runnum]],Novar=Novar1[[runnum]])
 summary(x)
 allmods<-bind_rows(DeltaMethod=Delta1[[runnum]],Simulated=Simvar1[[runnum]],Novar=Novar1[[runnum]],.id="Type")
@@ -58,3 +59,10 @@ plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Delta-Gamma","BigSim
 
 plotSums(filter(allmods,Valid==1 & Source %in% c("Simulated Tweedie","Novar Tweedie") ),"All",NULL)
 write.csv(filter(allmods,Valid==1 & Source %in% c("DeltaMethod Tweedie","Simulated Tweedie", "DeltaMethod TMBtweedie", "Simulated TMBtweedie","NovarTweedie","Novar TMBtweedie","Novar Tweedie") ),"temp.csv")
+
+
+## For LLSIM
+ObsPlus<-allmods
+load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code//R.workspace.rData")
+Delta1<-allmods
+

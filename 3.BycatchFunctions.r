@@ -376,7 +376,7 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
   returnval  
 }
 
-#Function to predict without variances to get predictions quickly for cross validation
+#Function to predict CPUE without variances to get predictions quickly for cross validation
 makePredictions<-function(modfit1,modfit2=NULL,modType,newdat) {
   if(!is.null(modfit1)) {
     predval1<-try(data.frame(predict(modfit1,newdata=newdat,se.fit=TRUE,type="response")))
@@ -476,7 +476,8 @@ makeIndexVar<-function(modfit1,modfit2=NULL,modType,obsdatval,newdat=newDat,prin
 #Generate standard errors and confidence intervals of predictions from simulation from regression coefficients and their var/covar matrix
 makePredictionsSimVar<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSims, printOutput=TRUE) {
   #Separate out sample units
-  newdat$Effort=newdat$Effort/newdat$SampleUnits
+  if(includeObsCatch)    newdat$Effort=newdat$unsampledEffort/newdat$SampleUnits else
+    newdat$Effort=newdat$Effort/newdat$SampleUnits
   newdat=uncount(newdat,SampleUnits)
   nObs=dim(newdat)[1]
   #Get predictions
@@ -491,7 +492,7 @@ makePredictionsSimVar<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSim
       response2<-data.frame(predict(modfit2,newdata=newdat,se.fit=TRUE,type="response"))
       names(response2)=paste0(names(response2),"2")
     }
-if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit)>10000)  {
+if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit,na.rm=TRUE)>10000)  {
   #Set up model matrices for simulation
   yvar=sub( " ", " ",formula(modfit1) )[2]
   newdat<-cbind(y=rep(1,nObs),newdat)
@@ -588,6 +589,20 @@ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit)>10000)  
                TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))
        sim=replicate(nsim, simulateTMBTweedieDraw(modfit1,nObs,a,newdat$Effort) )
   }
+    if(class(modfit1)[[1]]=="cpglm") obsdat=modfit1@model.frame else
+      obsdat=modfit1$data
+    if(includeObsCatch & modtype!="Binomial") { 
+      d=match(logdat$matchColumn,obsdat$matchColumn)
+      d=d[!is.na(d)]
+      allpred$Total[d]= allpred$Total[d] + obsdat$Catch
+      sim[d,]= sim[d,] + obsdat$Catch
+    }
+    if(includeObsCatch & modtype=="Binomial") { 
+      d=match(logdat$matchColumn,obsdat$matchColumn)
+      d=d[!is.na(d)]
+      allpred$Total[d]= obsdat$pres
+      sim[d,]= obsdat$pres
+    }
   stratatotal<-allpred %>%
       group_by_at(all_of(requiredVarNames)) %>%
       summarize(Total=sum(Total,na.rm=TRUE))
@@ -637,7 +652,8 @@ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit)>10000)  
 #Generate standard errors and confidence intervals of predictions from simulation from regression coefficients and their var/covar matrix
 makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSims, printOutput=TRUE) {
  #Separate out sample units
- newdat$Effort=newdat$Effort/newdat$SampleUnits
+ if(includeObsCatch)    newdat$Effort=newdat$unsampledEffort/newdat$SampleUnits else
+    newdat$Effort=newdat$Effort/newdat$SampleUnits
  newdat=uncount(newdat,SampleUnits)
  newdatall=newdat
  #Set up output dataframes
@@ -660,7 +676,7 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
       response2<-data.frame(predict(modfit2,newdata=newdat,se.fit=TRUE,type="response"))
       names(response2)=paste0(names(response2),"2")
     }
- if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit)>10000)  {
+ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit,na.rm=TRUE)>10000)  {
   #Set up model matrices for simulation
   yvar=sub( " ", " ",formula(modfit1) )[2]
   newdat<-cbind(y=rep(1,nObs),newdat)
@@ -757,6 +773,21 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
                TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))
        sim=replicate(nsim, simulateTMBTweedieDraw(modfit1,nObs,a,newdat$Effort) )
   }
+   if(class(modfit1)[[1]]=="cpglm") obsdat=modfit1@model.frame else
+      obsdat=modfit1$data
+   obsdat=obsdat[obsdat$Year==years[1],]
+    if(includeObsCatch & modtype!="Binomial") { 
+      d=match(logdat$matchColumn,obsdat$matchColumn)
+      d=d[!is.na(d)]
+      allpred$Total[d]= allpred$Total[d] + obsdat$Catch
+      sim[d,]= sim[d,] + obsdat$Catch
+    }
+    if(includeObsCatch & modtype=="Binomial") { 
+      d=match(logdat$matchColumn,obsdat$matchColumn)
+      d=d[!is.na(d)]
+      allpred$Total[d]= obsdat$pres
+      sim[d,]= obsdat$pres
+    }
   stratatotal<-allpred %>%
       group_by_at(all_of(requiredVarNames)) %>%
       summarize(Total=sum(Total,na.rm=TRUE))
@@ -814,11 +845,13 @@ simulateGammaDraw<-function(modfit,nObs,b) {
 simulateNegBin1Draw<-function(modfit,nObs,b,Effort) {
     muval<-exp(b %*% mvrnorm(1,fixef(modfit)[[1]],vcov(modfit)[[1]]))*Effort
     thetaval<-sigma(modfit)
-    rnbinom(nObs,mu=muval,size=muval/thetaval) 
+    predval<-rep(0,nObs)
+    predval[muval>0]<-rnbinom(length(muval[muval>0]),mu=muval[muval>0],size=muval[muval>0]/thetaval) 
+    predval
 }
 
 simulateTMBTweedieDraw<-function(modfit,nObs,b,Effort) {
-    muval<-as.vector(exp(a %*% mvrnorm(1,fixef(modfit)[[1]],vcov(modfit)[[1]])))
+    muval<-as.vector(exp(b %*% mvrnorm(1,fixef(modfit)[[1]],vcov(modfit)[[1]])))
     if(all(muval>0)) {
      simval<-rtweedie(nObs,power=glmmTMB:::.tweedie_power(modfit),
          mu=muval,phi=sigma(modfit))*Effort  } else  {
@@ -826,8 +859,6 @@ simulateTMBTweedieDraw<-function(modfit,nObs,b,Effort) {
          }
     simval
 }
-
-
 
 #Function to plot either total positive trips (binomial) or total catch/bycatch (all other models)
 plotSums<-function(yearpred,modType,fileName,subtext="") {
@@ -895,10 +926,13 @@ ResidualsFunc<-function(modfit1,modType,fileName=NULL,nsim=250) {
   if(!is.null(fileName))   pdf(fileName,height=5,width=7)
   if(!is.null(modfit1)) {
     dfcheck<-data.frame(Expected=predict(modfit1),Residuals=residuals(modfit1))
-    g1<-ggplot(dfcheck,aes(x=Expected,y=Residuals))+geom_point()+
+    if(nrow(dfcheck)>1000)
+      subsam<-sample(1:nrow(dfcheck),1000) else
+        subsam<-1:nrow(dfcheck) #Only show 1000 residuals if have more than that
+    g1<-ggplot(dfcheck[subsam,],aes(x=Expected,y=Residuals))+geom_point()+
         geom_abline(intercept=0,slope=0)+
         ggtitle(paste("a. ",modType,"ordinary residuals"))
-    g2<-ggplot(dfcheck,aes(sample=Residuals))+geom_qq()+geom_qq_line()+
+    g2<-ggplot(dfcheck[subsam,],aes(sample=Residuals))+geom_qq()+geom_qq_line()+
         ggtitle(paste("b. QQ normal of residuals"))
     if(class(modfit1)[1] =="cpglm") {  #Extra step to simulate DHARMa for cpglm or mgcv
       simvals=simulateTweedie(modfit1,nsim)
@@ -943,7 +977,7 @@ ResidualsFunc<-function(modfit1,modType,fileName=NULL,nsim=250) {
     if(class(simulationOutput)[1]!="try-error") {
 #      plot(simulationOutput, quantreg = F)
 #      title(modType,outer=2,line=-1)
-      df1<-data.frame(Residual=simulationOutput$scaledResiduals,Predictor=simulationOutput$fittedPredictedResponse) %>%
+      df1<-data.frame(Residual=simulationOutput$scaledResiduals[subsam],Predictor=simulationOutput$fittedPredictedResponse[subsam]) %>%
         arrange(Residual) %>%
         mutate(Empirical.Quantile=(1:n())/(n()+1)) %>%
         mutate(Expected.Quantile=qunif(Empirical.Quantile)) %>%
@@ -1136,7 +1170,8 @@ simulateNegBinGam <- function(modfit, nsims=250, offsetval=1){
 makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE) {
  if(modtype %in% c("Delta-Lognormal","Delta-Gamma")) stop("No delta-method variance available")
  #Separate out sample units
- newdat$Effort=newdat$Effort/newdat$SampleUnits
+ if(includeObsCatch)    newdat$Effort=newdat$unsampledEffort/newdat$SampleUnits else
+    newdat$Effort=newdat$Effort/newdat$SampleUnits
  newdat=uncount(newdat,SampleUnits)
  nObs=nrow(newdat)
  newdat$SampleUnits=rep(1,nObs)
@@ -1202,6 +1237,18 @@ makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE) {
     predval = predval * newdat$Effort
     deriv =  predval  #derivative of exp(x) is exp(x)
   }
+    if(class(modfit1)[[1]]=="cpglm") obsdat=modfit1@model.frame else
+      obsdat=modfit1$data
+    if(includeObsCatch & modtype!="Binomial") { 
+      d=match(logdat$matchColumn,obsdat$matchColumn)
+      d=a[!is.na(d)]
+      allpred$Total[a]= allpred$Total[d] + obsdat$Catch
+    }
+    if(includeObsCatch & modtype=="Binomial") { 
+      d=match(logdat$matchColumn,obsdat$matchColumn)
+      d=d[!is.na(d)]
+      allpred$Total[d]= obsdat$pres
+    }
   yearpred$Total[i]<-sum(predval)
   yearpred$TotalVar[i] = t(deriv) %*%
         vcovval %*%  deriv + sum(residvar)
@@ -1244,8 +1291,9 @@ makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE) {
 }
 
 #Function to predict total positive trips or total catches with no variance calculation
-makePredictionsNoVar<-function(modfit1,modfit2=NULL,modtype,newdat,obsdatval,printOutput=FALSE,nsims=nSims) {
-  newdat$Effort=newdat$Effort/newdat$SampleUnits
+makePredictionsNoVar<-function(modfit1,modfit2=NULL,modtype,newdat,obsdat=NULL,printOutput=FALSE,nsims=nSims) {
+  if(includeObsCatch)    newdat$Effort=newdat$unsampledEffort/newdat$SampleUnits else
+    newdat$Effort=newdat$Effort/newdat$SampleUnits
   newdat=uncount(newdat,SampleUnits)
   nObs=dim(newdat)[1]
   if(!is.null(modfit1)) {
@@ -1304,6 +1352,18 @@ makePredictionsNoVar<-function(modfit1,modfit2=NULL,modtype,newdat,obsdatval,pri
     if(modtype == "TMBtweedie") {
       allpred<-cbind(newdat,response1)  %>%
         mutate(Total=Effort*fit)
+    }
+    if(class(modfit1)[[1]]=="cpglm") obsdat=modfit1@model.frame else
+      obsdat=modfit1$data
+    if(includeObsCatch & modtype!="Binomial") { 
+      a=match(logdat$matchColumn,obsdat$matchColumn)
+      a=a[!is.na(a)]
+      allpred$Total[a]= allpred$Total[a] + obsdat$Catch
+    }
+    if(includeObsCatch & modtype=="Binomial") { 
+      a=match(logdat$matchColumn,obsdat$matchColumn)
+      a=a[!is.na(a)]
+      allpred$Total[a]= obsdat$pres
     }
     stratapred<-allpred %>%
       group_by_at(all_of(requiredVarNames)) %>%

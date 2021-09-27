@@ -6,7 +6,7 @@ baseDir<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Curren
 setwd(baseDir)
 
 #Give a name to the run, which will be used to set up a directory for the the outputs
-runName<-"Simulated factor year delta var"
+runName<-"Simulated factor year sim var"
 
 # What would you like to estimate?
 # You may calculate either an annual abundance index, or total bycatch, or both
@@ -31,13 +31,21 @@ sampleUnit<-"trips" #Usually trips, may be sets
 #that is not sampled, in trips with observers. This can be zero in all cases if observers
 #sample 100% of effort in sampled trips. 
 obsEffort<-"sampled.sets"
-#obsEffortNotSampled<-"unsampled.sets"  #Not needed yet. May be added to later version
 logEffort<-"sets" #This variable is only needed if estimating bycatch
+logUnsampledEffort<-NULL  #This variable is only needed includeObsCatch is true
 
 # Give the name of the column in the logbook data that gives the number of sample units (trips or sets)
 # that each row includes. If the logbook data is not aggregated (i.e. each row is a sample unit) 
 # just make this NA 
 logNum<-NA
+
+# Make includeObsCatch TRUE if (1) the observed sample units can be matched to the logbook
+# sample units and (2) you want to calculate total bycatch as the observed bycatch plus the 
+# predicted unobserved bycatch. This doesn't work with aggregated logbook effort. 
+includeObsCatch<-FALSE
+# if includeObsCatch is true, give the name of the column that matches sample
+# units between the observer and logbook data. Otherwise, this can be NA
+matchColumn<-NA
 
 #Give common and scientific names. Can be a vector of names to do multiple species at the same time
 #in which case each species must have its own column in obsdat.
@@ -95,7 +103,7 @@ CIval<-0.05 #Should be the alpha level, e.g. 0.05 for 95%
 # Variance calculation method. Simulate will not work with a large number of sample units
 # in the logbook data. The delta method for variance calculation is not implemented
 # for the delta-lognormal or delta-gamma methods. 
-VarCalc<-c("Simulate","DeltaMethod","None")[2] 
+VarCalc<-c("Simulate","DeltaMethod","None")[1] 
 
 # Specify whether to save R workspace. This should be true unless you 
 # don't have space on your disk. Also specify whether to use parallel processing to

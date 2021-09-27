@@ -26,7 +26,7 @@ options(warn=defaultW)
 nSims<-1000  #For simulating CIs where needed
 NumCores<-detectCores()  #Check if machine has multiple cores for parallel processing
 #Make sure binomial is included if either of the delta models is
-if(("Lognormal" %in% modelTry |"Gamma" %in% modelTry) & !"Binomial" %in% modelTry)
+if(("Delta-Lognormal" %in% modelTry |"Delta-Gamma" %in% modelTry) & !"Binomial" %in% modelTry)
   modelTry<-c("Binomial",modelTry)
 
 # Set up variables
@@ -47,7 +47,6 @@ indexVarNames<-as.vector(getAllTerms(indexModel))
 if(!"Year" %in% indexVarNames) indexVarNames<-c("Year",indexVarNames)
 
 #Set up data frames
-#UnObsEffort=!!obsEffortNotSampled
 obsdat<-obsdat %>%  
   rename(Effort=!!obsEffort) %>%
   mutate_at(vars(all_of(factorNames)),factor) 
@@ -60,13 +59,17 @@ if(EstimateBycatch) {
    rename(Effort=!!logEffort,SampleUnits=!!logNum) %>%
   mutate_at(vars(all_of(factorNames)),factor) 
  if(logEffort==sampleUnit) logdat<-mutate(logdat,Effort=SampleUnits)
+ if(includeObsCatch) {
+  obsdat<-obsdat %>% rename(matchColumn=!!matchColumn)
+  logdat<-logdat %>% rename(matchColumn=!!matchColumn,unsampledEffort=!!logUnsampledEffort)
+ }
 }
 
 # See if data set is large
 BigData<-ifelse(sum(logdat$SampleUnits)>10000,TRUE,FALSE)
 #Add stratum designation and check sample size in strata
 if(length(requiredVarNames)>1) {
- logdat$strata<-apply( x[ , requiredVarNames ] , 1 , paste , collapse = "-" ) 
+ logdat$strata<-apply( logdat[ , requiredVarNames ] , 1 , paste , collapse = "-" ) 
 } else {
  logdat$strata <- pull(logdat,var=requiredVarNames)
 }
@@ -130,9 +133,11 @@ if(NumCores>3 & numSp>1)  {
 foreach(run= 1:numSp) %do%  {
   dirname[[run]]<-paste0(outDir,"/",common[run]," ",catchType[run],"/")
   if(!dir.exists(dirname[[run]])) dir.create(dirname[[run]])
+  if(includeObsCatch) tempvars<-c(allVarNames,"Effort","Catch","matchColumn") else
+    tempvars<-c(allVarNames,"Effort","Catch")
   dat[[run]]<-obsdat %>%
     rename(Catch=!!obsCatch[run])%>%
-    dplyr::select_at(all_of(c(allVarNames,"Effort","Catch"))) %>%
+    dplyr::select_at(all_of(tempvars)) %>%
     drop_na()   %>%
     mutate(cpue=Catch/Effort,
            log.cpue=log(Catch/Effort),

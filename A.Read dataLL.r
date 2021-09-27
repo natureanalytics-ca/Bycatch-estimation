@@ -198,3 +198,26 @@ sum(obslltrip$sampled.sets)
 names(obsllset)
 
 
+# Add column to match logbook to observer data
+a<-match(obslltrip$TRIPNUMBER,llobsmatch$TripNumber)
+table(obslltrip$Year,is.na(a))
+obslltrip$LOGBOOK_KEY<-llobsmatch$LOGBOOK_KEY[a]
+b<-match(logtripll$LOGBOOK_KEY,llobsmatch$LOGBOOK_KEY)
+table(logtripll$Year,is.na(b))
+logtripll$TRIPNUMBER<-llobsmatch$TripNumber[b]
+summary(obslltrip$LOGBOOK_KEY)
+obslltripmatch=obslltrip[!is.na(obslltrip$LOGBOOK_KEY),]
+dim(obslltrip)
+dim(obslltripmatch)
+
+logtripll$SampledEffort<-rep(NA,nrow(logtripll))
+for(i in 1:nrow(obslltripmatch)) {
+  logtripll$SampledEffort[logtripll$LOGBOOK_KEY==obslltripmatch$LOGBOOK_KEY[i]]<-obslltripmatch$sampled.sets[i]
+}
+ggplot(filter(logtripll,!is.na(SampledEffort)),aes(y=SampledEffort,x=sets))+
+  geom_point()+geom_abline(intercept=0,slope=1)
+table(logtripll$SampledEffort>logtripll$sets)
+#87 matched trips have more observer effort than logbook effort. 
+
+
+

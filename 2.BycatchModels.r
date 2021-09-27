@@ -7,7 +7,7 @@
 # Contact Beth Babcock ebabcock@rsmas.miami.edu for assistance. 
 
 ############### Step 1. Enter the data specification in the file named here #############################
-specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationReefLLsim.r"
+specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationExample.r"
 # Either set the working directory or put the full patch in the filename.
 # Complete the information in the file before continuing. You may run through specFile line by line, but it 
 # will also be sourced again later. The file will be saved, with the addition of the date, to the output directory
@@ -81,7 +81,7 @@ for(run in 1:numSp) {
       if(VarCalc=="None") {
          modPredVals[[run]][[modelTry[mod]]]<-
             makePredictionsNoVar(modfit1=modfit1,modfit2=modfit2,
-            modtype=modelTry[mod],newdat=logdat)
+            modtype=modelTry[mod],newdat=logdat,obsdat=datval)
       }
      }
      if(EstimateIndex) {
