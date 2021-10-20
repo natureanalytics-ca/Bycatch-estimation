@@ -21,3 +21,5 @@ To use the tool, give the names of your data files, and the desired settings in
 You should not need to modify anything except in 1.BycatchModelSpecification.r. The files called examplelog.csv and exampleobs.csv are simulated data examples loosely based on the Gulf of Mexico reef fish longline fishery, which will work with the example. 
 
 The file labeled A.ReadDataLL.r sets up the data for analysis from the actual reef longline observer and logbook data, not included due to privacy concerns. 
+
+See the User Guide for more information. 
