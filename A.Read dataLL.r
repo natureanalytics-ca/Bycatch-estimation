@@ -75,8 +75,8 @@ Sharks<- spSummary %>%
 Sharks$COMMON
 
 #Pick species category to run
-#spSummary<-Sharks
-spSummary<-commonKeptFinfish
+spSummary<-Sharks
+#spSummary<-commonKeptFinfish
 #spSummary<-commonBycatchFinfish
 logll$SpeciesSelect<-ifelse(logll$SCIENTIFIC %in% spSummary$SCIENTIFIC,logll$SCIENTIFIC,"Other")
 obsll$SpeciesSelect<-ifelse(obsll$SCIENTIFIC %in% spSummary$SCIENTIFIC,obsll$SCIENTIFIC,"Other")
@@ -110,9 +110,9 @@ dim(obslltrip)
 summary(obslltrip)
 
 #Add selected catch type as column to trip summary
-catchtype<-"kept.kg"
+#catchtype<-"kept.kg"
 #catchtype<-"discard.dead.num"
-#catchtype<-"all.num"
+catchtype<-"all.num"
 
 if(catchtype=="kept.kg") {
   catch<-obsll %>% group_by(TRIPNUMBER,SpeciesSelect) %>% 
@@ -215,7 +215,8 @@ for(i in 1:nrow(obslltripmatch)) {
   logtripll$SampledEffort[logtripll$LOGBOOK_KEY==obslltripmatch$LOGBOOK_KEY[i]]<-obslltripmatch$sampled.sets[i]
 }
 ggplot(filter(logtripll,!is.na(SampledEffort)),aes(y=SampledEffort,x=sets))+
-  geom_point()+geom_abline(intercept=0,slope=1)
+  geom_point()+geom_abline(intercept=0,slope=1) + xlab("Logbook effort")+ ylab("Observed effort")+
+  ggtitle("Observed and logbook number of hooks, same trips")
 table(logtripll$SampledEffort>logtripll$sets)
 #87 matched trips have more observer effort than logbook effort. 
 

@@ -377,7 +377,7 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
 }
 
 #Function to predict CPUE without variances to get predictions quickly for cross validation
-makePredictions<-function(modfit1,modfit2=NULL,modType,newdat) {
+makePredictions<-function(modfit1,modfit2=NULL,modType,newdat,obsdatval=NULL) {
   if(!is.null(modfit1)) {
     predval1<-try(data.frame(predict(modfit1,newdata=newdat,se.fit=TRUE,type="response")))
     if(class(predval1)[[1]]!="try-error") {
@@ -474,7 +474,7 @@ makeIndexVar<-function(modfit1,modfit2=NULL,modType,obsdatval,newdat=newDat,prin
 }
 
 #Generate standard errors and confidence intervals of predictions from simulation from regression coefficients and their var/covar matrix
-makePredictionsSimVar<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSims, printOutput=TRUE) {
+makePredictionsSimVar<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSims, printOutput=TRUE,obsdatval=NULL) {
   #Separate out sample units
   if(includeObsCatch)    newdat$Effort=newdat$unsampledEffort/newdat$SampleUnits else
     newdat$Effort=newdat$Effort/newdat$SampleUnits
@@ -589,19 +589,17 @@ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit,na.rm=TRU
                TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))
        sim=replicate(nsim, simulateTMBTweedieDraw(modfit1,nObs,a,newdat$Effort) )
   }
-    if(class(modfit1)[[1]]=="cpglm") obsdat=modfit1@model.frame else
-      obsdat=modfit1$data
     if(includeObsCatch & modtype!="Binomial") { 
-      d=match(logdat$matchColumn,obsdat$matchColumn)
+      d=match(logdat$matchColumn,obsdatval$matchColumn)
       d=d[!is.na(d)]
-      allpred$Total[d]= allpred$Total[d] + obsdat$Catch
-      sim[d,]= sim[d,] + obsdat$Catch
+      allpred$Total[d]= allpred$Total[d] + obsdatval$Catch
+      sim[d,]= sim[d,] + obsdatval$Catch
     }
     if(includeObsCatch & modtype=="Binomial") { 
-      d=match(logdat$matchColumn,obsdat$matchColumn)
+      d=match(logdat$matchColumn,obsdatval$matchColumn)
       d=d[!is.na(d)]
-      allpred$Total[d]= obsdat$pres
-      sim[d,]= obsdat$pres
+      allpred$Total[d]= obsdatval$pres
+      sim[d,]= obsdatval$pres
     }
   stratatotal<-allpred %>%
       group_by_at(all_of(requiredVarNames)) %>%
@@ -650,7 +648,7 @@ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit,na.rm=TRU
 }
 
 #Generate standard errors and confidence intervals of predictions from simulation from regression coefficients and their var/covar matrix
-makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSims, printOutput=TRUE) {
+makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=nSims, printOutput=TRUE,obsdatval=datval) {
  #Separate out sample units
  if(includeObsCatch)    newdat$Effort=newdat$unsampledEffort/newdat$SampleUnits else
     newdat$Effort=newdat$Effort/newdat$SampleUnits
@@ -773,20 +771,19 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
                TotalVar=Effort^2*(se.fit^2+sigma(modfit1)*fit^(glmmTMB:::.tweedie_power(modfit1))))
        sim=replicate(nsim, simulateTMBTweedieDraw(modfit1,nObs,a,newdat$Effort) )
   }
-   if(class(modfit1)[[1]]=="cpglm") obsdat=modfit1@model.frame else
-      obsdat=modfit1$data
-   obsdat=obsdat[obsdat$Year==years[1],]
     if(includeObsCatch & modtype!="Binomial") { 
-      d=match(logdat$matchColumn,obsdat$matchColumn)
+      obsdatvalyear=obsdatval[obsdatval$Year==years[i],]
+      d=match(logdat$matchColumn,obsdatvalyear$matchColumn)
       d=d[!is.na(d)]
-      allpred$Total[d]= allpred$Total[d] + obsdat$Catch
-      sim[d,]= sim[d,] + obsdat$Catch
+      allpred$Total[d]= allpred$Total[d] + obsdatvalyear$Catch
+      sim[d,]= sim[d,] + obsdatvalyear$Catch
     }
     if(includeObsCatch & modtype=="Binomial") { 
-      d=match(logdat$matchColumn,obsdat$matchColumn)
+      obsdatvalyear=obsdatval[obsdatval$Year==years[i],]
+      d=match(logdat$matchColumn,obsdatvalyear$matchColumn)
       d=d[!is.na(d)]
-      allpred$Total[d]= obsdat$pres
-      sim[d,]= obsdat$pres
+      allpred$Total[d]= obsdatvalyear$pres
+      sim[d,]= obsdatvalyear$pres
     }
   stratatotal<-allpred %>%
       group_by_at(all_of(requiredVarNames)) %>%
@@ -1005,6 +1002,7 @@ ResidualsFunc<-function(modfit1,modType,fileName=NULL,nsim=250) {
                   test4$statistic,
                   test4$p.value)
       names(returnval)=c("KS.D","KS.p","Dispersion.ratio","Dispersion.p","ZeroInf.ratio","ZeroInf.p","Outlier","Outlier.p")
+      if(modType %in% c("Delta-Gamma","Delta-Lognormal","Lognormal")) returnval[5:6]=NA  
     } else returnval=NULL    
   } else returnval=NULL
  if(!is.null(fileName))  dev.off()
@@ -1167,7 +1165,7 @@ simulateNegBinGam <- function(modfit, nsims=250, offsetval=1){
 }
 
 #Generate standard errors and confidence intervals of predictions with delta-method separately by year
-makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE) {
+makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE,obsdatval=datval) {
  if(modtype %in% c("Delta-Lognormal","Delta-Gamma")) stop("No delta-method variance available")
  #Separate out sample units
  if(includeObsCatch)    newdat$Effort=newdat$unsampledEffort/newdat$SampleUnits else
@@ -1237,17 +1235,17 @@ makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE) {
     predval = predval * newdat$Effort
     deriv =  predval  #derivative of exp(x) is exp(x)
   }
-    if(class(modfit1)[[1]]=="cpglm") obsdat=modfit1@model.frame else
-      obsdat=modfit1$data
     if(includeObsCatch & modtype!="Binomial") { 
-      d=match(logdat$matchColumn,obsdat$matchColumn)
+      obsdatvalyear=obsdatval[obsdatval$Year==years[i],]
+      d=match(logdat$matchColumn,obsdatvalyear$matchColumn)
       d=a[!is.na(d)]
-      allpred$Total[a]= allpred$Total[d] + obsdat$Catch
+      allpred$Total[a]= allpred$Total[d] + obsdatvalyear$Catch
     }
     if(includeObsCatch & modtype=="Binomial") { 
-      d=match(logdat$matchColumn,obsdat$matchColumn)
+      obsdatvalyear=obsdatval[obsdatval$Year==years[i],]
+      d=match(logdat$matchColumn,obsdatvalyear$matchColumn)
       d=d[!is.na(d)]
-      allpred$Total[d]= obsdat$pres
+      allpred$Total[d]= obsdatvalyear$pres
     }
   yearpred$Total[i]<-sum(predval)
   yearpred$TotalVar[i] = t(deriv) %*%
@@ -1291,7 +1289,7 @@ makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE) {
 }
 
 #Function to predict total positive trips or total catches with no variance calculation
-makePredictionsNoVar<-function(modfit1,modfit2=NULL,modtype,newdat,obsdat=NULL,printOutput=FALSE,nsims=nSims) {
+makePredictionsNoVar<-function(modfit1,modfit2=NULL,modtype,newdat,obsdatval=NULL,printOutput=FALSE,nsims=nSims) {
   if(includeObsCatch)    newdat$Effort=newdat$unsampledEffort/newdat$SampleUnits else
     newdat$Effort=newdat$Effort/newdat$SampleUnits
   newdat=uncount(newdat,SampleUnits)
@@ -1353,17 +1351,15 @@ makePredictionsNoVar<-function(modfit1,modfit2=NULL,modtype,newdat,obsdat=NULL,p
       allpred<-cbind(newdat,response1)  %>%
         mutate(Total=Effort*fit)
     }
-    if(class(modfit1)[[1]]=="cpglm") obsdat=modfit1@model.frame else
-      obsdat=modfit1$data
     if(includeObsCatch & modtype!="Binomial") { 
-      a=match(logdat$matchColumn,obsdat$matchColumn)
+      a=match(logdat$matchColumn,obsdatval$matchColumn)
       a=a[!is.na(a)]
-      allpred$Total[a]= allpred$Total[a] + obsdat$Catch
+      allpred$Total[a]= allpred$Total[a] + obsdatval$Catch
     }
     if(includeObsCatch & modtype=="Binomial") { 
-      a=match(logdat$matchColumn,obsdat$matchColumn)
+      a=match(logdat$matchColumn,obsdatval$matchColumn)
       a=a[!is.na(a)]
-      allpred$Total[a]= obsdat$pres
+      allpred$Total[a]= obsdatval$pres
     }
     stratapred<-allpred %>%
       group_by_at(all_of(requiredVarNames)) %>%

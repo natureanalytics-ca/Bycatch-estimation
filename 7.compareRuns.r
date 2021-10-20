@@ -62,7 +62,36 @@ write.csv(filter(allmods,Valid==1 & Source %in% c("DeltaMethod Tweedie","Simulat
 
 
 ## For LLSIM
+#load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputLLSIMBUMtripOctobs75/R.workspace.rData")
 ObsPlus<-allmods
-load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code//R.workspace.rData")
-Delta1<-allmods
+#load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputLLSIMBUMtripOctpred75/R.workspace.rData")
+AllPred<-allmods
 
+## For kept reef finfish
+#load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputKeptReefDelta/R.workspace.rData")
+Delta<-allmods
+#load("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/OutputKeptReefSimVar/R.workspace.rData")
+SimVar<-allmods
+
+trueVals$Total<-trueVals[,paste0("catch.",sp[run])]
+
+#Combine predictions
+runnum<-1
+run<-1
+#allmods<-bind_rows(ObsPlus=ObsPlus[[runnum]],AllPred=AllPred[[runnum]],.id="Type")
+allmods<-bind_rows(Delta=Delta[[runnum]],SimVar=SimVar[[runnum]],.id="Type")
+allmods$Source=paste(allmods$Type,allmods$Source)
+table(allmods$Source)
+names(allmods)
+
+#Plot combinations of models
+#runs<-c("AllPred","ObsPlus")
+runs<-c("SimVar","Delta")
+
+for(i in 2:length(modelTry)) {
+ runType<-modelTry[i]
+ modsToGet<-paste(rep(runs,each=length(runType)),rep(runType,length(runs)))
+ #plotSums(filter(allmods,Valid==1 & Source %in% modsToGet ),"All",NULL)
+ filenameval<-paste0("comparison","llkept",modelTry[i],".pdf")
+ plotSumsValidate(filter(allmods,Valid==1 & Source %in% modsToGet ),trueVals,filenameval,"Total")
+}

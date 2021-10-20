@@ -2,6 +2,9 @@
 title: " "
 date: " "
 output: pdf_document
+header-includes:
+    - \usepackage{caption}
+    - \usepackage{float}
 ---
 
 ```{r setupsummary, include=FALSE}
@@ -28,8 +31,8 @@ for(run in 1:numSp) {
   df1 %>%
    remove_rownames() %>%
    kbl(caption = headerText,format="latex",label=paste0("tablesummary",run)) %>%
-   kable_styling(
-     latex_options = c("hold_position","scale_down","basic")) %>%
+   kable_styling(font_size = 8,
+     latex_options = c("hold_position","basic","scale_down")) %>%
     print()
 }
 ```

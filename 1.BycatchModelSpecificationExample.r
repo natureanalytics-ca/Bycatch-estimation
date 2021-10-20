@@ -6,7 +6,9 @@ baseDir<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Curren
 setwd(baseDir)
 
 #Give a name to the run, which will be used to set up a directory for the the outputs
-runName<-"Simulated factor year sim var"
+#and a run description to describe the run in the output files
+runName<-"SimulatedExample"
+runDescription<-"Example with simulated data"
 
 # What would you like to estimate?
 # You may calculate either an annual abundance index, or total bycatch, or both
@@ -81,7 +83,7 @@ factorNames=c("Year","season")
 # negative binomial 1, negative binomial 2 and Tweedie from the GLMMTMB library. Binomial is run
 #automatically as part of the delta models if either of them are selected.
 
-modelTry<-c("Binomial","Normal","Lognormal","Gamma","Delta-Lognormal","Delta-Gamma","NegBin","Tweedie","TMBnbinom1","TMBnbinom2","TMBtweedie")
+modelTry<-c("Binomial","Lognormal","Delta-Lognormal","Delta-Gamma","NegBin","TMBnbinom1","TMBnbinom2","TMBtweedie")
 
 #Specify preferred information criteria for model selection
 # Choices are AICc, AIC and BIC. 

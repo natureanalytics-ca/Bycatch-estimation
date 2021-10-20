@@ -6,6 +6,8 @@ bibliography: C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Cu
 output: pdf_document
 header-includes:
     - \usepackage{caption}
+    - \usepackage{float}
+    - \usepackage{longtable}
 ---
 \captionsetup[table]{labelformat=empty}
 
@@ -55,7 +57,9 @@ baseDir<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Curren
 setwd(baseDir)
 
 #Give a name to the run, which will be used to set up a directory for the the outputs
-runName<-"Simulated data example"
+#and a run description to describe the run in the output files
+runName<-"SimulatedExample"
+runDescription<-"Example with simulated data"
 
 # What would you like to estimate?
 # You may calculate either an annual abundance index, or total bycatch, or both
@@ -332,7 +336,7 @@ Finally, this section combines all the bycatch estimates and index estimates int
  }
  #Combine all predictions, except Binomial
   if(EstimateBycatch) {
-   yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=CatEst,Total.se=Catse) %>%
+   yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=Cat,Total.se=Cse) %>%
      mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,
         Total.mean=NA,TotalLCI=Total-1.96*Total.se,TotalUCI=Total+1.96*Total.se)
    if(is.factor(modPredVals[[run]][[1]]$Year)) yearsumgraph$Year<-factor(yearsumgraph$Year)

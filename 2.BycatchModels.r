@@ -70,18 +70,18 @@ for(run in 1:numSp) {
          if(BigData)
            modPredVals[[run]][[modelTry[mod]]]<-
             makePredictionsSimVarBig(modfit1=modfit1,modfit2=modfit2,
-            modtype=modelTry[mod],newdat=logdat) else
+            modtype=modelTry[mod],newdat=logdat,obsdatval=datval) else
            modPredVals[[run]][[modelTry[mod]]]<-
             makePredictionsSimVar(modfit1=modfit1,modfit2=modfit2,
-            modtype=modelTry[mod],newdat=logdat)   
+            modtype=modelTry[mod],newdat=logdat,obsdatval=datval)   
       if(VarCalc=="DeltaMethod" & !modelTry[mod] %in% c("Delta-Lognormal","Delta-Gamma")) 
            modPredVals[[run]][[modelTry[mod]]]<-
             makePredictionsDeltaVar(modfit1=modfit1,
-            modtype=modelTry[mod],newdat=logdat) 
+            modtype=modelTry[mod],newdat=logdat,obsdatval=datval) 
       if(VarCalc=="None") {
          modPredVals[[run]][[modelTry[mod]]]<-
             makePredictionsNoVar(modfit1=modfit1,modfit2=modfit2,
-            modtype=modelTry[mod],newdat=logdat,obsdat=datval)
+            modtype=modelTry[mod],newdat=logdat,obsdatval=datval)
       }
      }
      if(EstimateIndex) {
@@ -101,7 +101,7 @@ for(run in 1:numSp) {
  }
  #Combine all predictions, except Binomial
   if(EstimateBycatch) {
-   yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=CatEst,Total.se=Catse) %>%
+   yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=Cat,Total.se=Cse) %>%
      mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,
         Total.mean=NA,TotalLCI=Total-1.96*Total.se,TotalUCI=Total+1.96*Total.se)
    if(is.factor(modPredVals[[run]][[1]]$Year)) yearsumgraph$Year<-factor(yearsumgraph$Year)
@@ -177,7 +177,8 @@ for(run in 1:numSp) {
    bestmod[run]<-"None"
  }  
 }
-save(list=c("numSp","yearSum","runName", "common", "sp","bestmod",
+save(list=c("numSp","yearSum","runName","runDescription",
+   "common", "sp","bestmod","CIval","includeObsCatch",
   "predbestmod","indexbestmod","allmods","allindex","modelTable",
  "modelSelectTable","modFits","modPredVals","VarCalc"
  ,"modIndexVals","modelFail","rmsetab","metab",

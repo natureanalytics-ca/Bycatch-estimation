@@ -53,7 +53,7 @@ obsdat<-obsdat %>%
 if(EstimateBycatch) {
  if(is.na(logNum))   { 
    logdat<-mutate(logdat,SampleUnits=1)
-   logNum="SampleUnits"
+   logNum<-"SampleUnits"
  }
  logdat<-logdat %>%  
    rename(Effort=!!logEffort,SampleUnits=!!logNum) %>%
@@ -144,28 +144,25 @@ foreach(run= 1:numSp) %do%  {
            pres=ifelse(cpue>0,1,0)) 
   if(dim(dat[[run]])[1]<dim(obsdat)[1]) print(paste0("Removed ",dim(obsdat)[1]-dim(dat[[run]])[1]," rows with NA values for ",common[run]))
   yearSum[[run]]<-dat[[run]] %>% group_by(Year) %>%
-    summarize(ObsCat=sum(Catch,na.rm=TRUE),
-              ObsEff=sum(Effort,na.rm=TRUE),
-              ObsUnits=length(Year),
+    summarize(OCat=sum(Catch,na.rm=TRUE),
+              OEff=sum(Effort,na.rm=TRUE),
+              OUnit=length(Year),
               CPUE=mean(cpue,na.rm=TRUE),
-              CPUEse=standard.error(cpue),
-              Outlr=outlierCountFunc(cpue),
+              CPse=standard.error(cpue),
+              Out=outlierCountFunc(cpue),
               Pos=sum(pres,na.rm=TRUE)) %>%
-    mutate(PosFrac=Pos/ObsUnits)
+    mutate(PFrac=Pos/OUnit)
   if(EstimateBycatch) {
    x<-logdat  %>% group_by(Year) %>%
-    summarize(Effort=sum(Effort,na.rm=TRUE),Units=sum(SampleUnits)) 
-   yearSum[[run]]<-merge(yearSum[[run]],x) %>% mutate(EffObsFrac=ObsEff/Effort,
-                                                     UnitsObsFrac=ObsUnits/Units)
+    summarize(Eff=sum(Effort,na.rm=TRUE),Units=sum(SampleUnits)) 
+   yearSum[[run]]<-merge(yearSum[[run]],x) %>% mutate(EFrac=OEff/Eff,
+                                                     UFrac=OUnit/Units)
    logyear<-logdat %>% group_by(Year) %>% summarize(Effort=sum(Effort,na.rm=TRUE))
    x=ratio.func(dat[[run]]$Effort,dat[[run]]$Catch,dat[[run]]$Year,
                logyear$Effort,logyear$Effort,logyear$Year)
-   yearSum[[run]]<-cbind(yearSum[[run]],CatEst=x$stratum.est,Catse=x$stratum.se) %>% 
+   yearSum[[run]]<-cbind(yearSum[[run]],Cat=x$stratum.est,Cse=x$stratum.se) %>% 
     ungroup() %>% mutate(Year=as.numeric(as.character(Year))) %>%
-     mutate(Year=ifelse(Year<startYear,Year+startYear,Year)) %>%
-    dplyr::rename(!!paste0("Obs",sampleUnit):=ObsUnits,                                 ,
-                  !!sampleUnit:=Units,
-                  !!paste0(sampleUnit,"ObsFrac"):=UnitsObsFrac)
+     mutate(Year=ifelse(Year<startYear,Year+startYear,Year)) 
   } 
   write.csv(yearSum[[run]],paste0(dirname[[run]],common[run],catchType[run],"DataSummary.csv"))
 }
