@@ -7,7 +7,7 @@ library(haven)
 library(ggplot2)
 
 #Get Beth's functions
-setwd("C:/Users/ebabcock/dropbox/Bycatch Project/Current R code")
+setwd("C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code")
 source("3.BycatchFunctions.r")
 
 #Uncomment to read in  data
@@ -27,7 +27,8 @@ length(unique(obsvl$TRIPNUMBER))  #1350 trips
 
 #Extract just reef vertical line data from logbook, and exclude areas outside GOM  (CHeck)
 #After converting areas to the old areas for consistency across time series (1-24)
-logvl<- logbook %>% mutate(area=areaGOM(AREA)) %>% filter(gear_type %in% c("bandit","hl") & !is.na(area))
+logvl<- logbook %>% mutate(area=areaGOM(AREA)) %>% 
+  filter(gear_type %in% c("bandit","hl") & !is.na(area))
 length(unique(logvl$LOGBOOK_KEY)) #86623 trips
 ### End definition of full dataset ####
 
@@ -174,3 +175,47 @@ logyearsum<-merge(logyearsum,spyearsum)
 logyearsum
 
 summary(obsvltrip)
+##
+
+
+
+#Turtle data
+setwd("~/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/Data")
+turtle<-read.csv("All Turtles.csv")
+summary(turtle)
+dim(turtle)
+table(turtle$CapOrSit,turtle$StaOrNot)
+table(turtle$GearType,turtle$Species)
+
+turtle$Date<-as.Date(str_split(turtle$CaptureDate," ",simplify=TRUE)[,1],format="%m/%d/%Y")
+turtle$Year<-format(turtle$Date,format="%Y")
+table(turtle$Year)
+turtle$ObsType<-substring(turtle$TripNumber,1,2)
+table(turtle$ObsType,turtle$CapOrSit)
+
+table(turtle$CapOrSit,turtle$GearType)
+turtlevl<-turtle %>%
+ filter(CapOrSit=="CAPTURED" & GearType %in% c("BANDIT REEL","HANDLINE") & ObsType %in% c("GL","GB"))
+x<-match(turtlevl$TripNumber,obsvl$TRIPNUMBER)
+summary(x)
+turtlevl[is.na(x),]  #NAS are from 2019
+
+dim(turtlevl)
+table(turtlevl$CaptureDate,turtlevl$Species)
+length(unique(turtlevl$TripNumber))
+dim(turtlevl)
+
+turtletrip<-turtlevl %>% 
+  filter(Species=="LOGGERHEAD") %>%
+  group_by(TripNumber) %>%
+  summarize(Number=n())
+turtletrip
+
+x<-match(obsvltrip$TRIPNUMBER,turtletrip$TripNumber)
+table(is.na(x))
+obsvltrip$Loggerhead<-turtletrip$Number[match(obsvltrip$TRIPNUMBER,turtletrip$TripNumber)]
+obsvltrip$Loggerhead[is.na(obsvltrip$Loggerhead)]<-0
+sum(obsvltrip$Loggerhead)
+sum(turtletrip$Number)
+dim(turtletrip)
+
