@@ -111,7 +111,7 @@ VarCalc<-c("Simulate","DeltaMethod","None")[1]
 # don't have space on your disk. Also specify whether to use parallel processing to
 # speed up calculations.
 saveR<-TRUE
-useParallel<-TRUE
+useParallel<-FALSE
 
 ## Validation. If you have true values of the total bycatch (for example in a simulation study)
 # Make PlotValidation true and fill out the rest of the specification. 

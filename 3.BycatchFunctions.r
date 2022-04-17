@@ -62,14 +62,54 @@ gettimefunc2=function(x) {
   timeval
 }  
 
+#Function to convert months into 2, 3 4 or 6 numbered seasons
 seasonfunc<-function(month,numseason=4) {
   if(!is.numeric(month)) month=as.numeric(as.character(month))
   seasons=rep(1:numseason,each=12/numseason)
   seasons[month]
 }
+#Function to group the specified number of years together, starting from the last year
+yearfunc<-function(year,numyears=1) {
+  if(!is.numeric(year)) year=as.numeric(as.character(year))
+  trunc((year-max(year))/numyears)*numyears+max(year)
+}
+
+#Function to look for positive and zero observations across levels of multiple factors
+CheckForPositives<-function(datval,species,variables) {
+  tables=list()
+  for(i in 1:length(variables)) {
+    tables[[i]]=table(ifelse(datval[,species]>0,"Positive","Zero"),datval[,variables[i]])
+    names(tables)[i]=variables[i]
+  }
+  tables
+}
+
+#Same for plotting
+CheckForPositivesPlot<-function(datval,species,variables) {
+  tables=list()
+  datval$Positive=ifelse(datval[,species]>0,"Positive","Zero")
+  datval=select(datval,all_of(c("Positive",variables)))
+  for(i in 1:length(variables)) {
+    tables[[i]]=datval %>% rename(Group=!!variables[i]) %>%
+    group_by(Group,Positive) %>%
+      summarize(Count=n()) %>%
+      mutate(Group=as.character(Group))
+  }
+  names(tables)=variables
+  tables=bind_rows(tables, .id="Variable") 
+  tables$Group=factor(tables$Group)
+  tables$Group=factor(tables$Group,levels=str_sort(levels(tables$Group),numeric=TRUE))
+  tables  
+}
 
 # Function to count the number of unique levels in a vector
 length.unique=function(x) length(unique(x))
+
+#Function to divide up areas. Input grid areas, returns East vs. West
+areaDivide<-function(area) {
+ EW=ifelse(area>=11,"W","E")  
+ EW
+}
 
 # Stratum designations from Scott-Denton paper, and shrimp observer manual for GOM shrimp areas
 areafunc=function(x) {
@@ -346,12 +386,13 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
       modfit1<-glmmTMB(formula(modfit1),family=TMBfamily,data=obsdatval,na.action=na.fail)
    if(useParallel) {
       cl2<-makeCluster(NumCores-2)
-      registerDoParallel(cl2)
-      clusterExport(cl2,varlist=c("obsdatval","modfit1","keepVars"),envir=environment())
-     clusterEvalQ(cl2, {library(glmmTMB)
+      clusterEvalQ(cl2, {library(glmmTMB)
                         library(cplm)    
-                        library(MASS) } )
-     modfit2<-try(MuMIn::pdredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras,cl2))
+                        library(MASS)} )
+      clusterExport(cl2,
+        list("obsdatval","modfit1","keepVars","extras","selectCriteria"),
+        envir=environment())
+     modfit2<-dredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras,cluster=cl2)
      stopCluster(cl2)
    } else {
      modfit2<-try(dredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras))
@@ -657,7 +698,7 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
  #Set up output dataframes
  years=sort(unique(newdat$Year))
  yearpred=expand.grid(Year=years,Total=NA,TotalVar=NA,Total.mean=NA,TotalLCI=NA,TotalUCI=NA,Total.se=NA,Total.cv=NA)
- stratapred=expand.grid(strata=unique(newdatall$strata),Total=NA,TotalVar=NA,Total.mean=NA,TotalLCI=NA,TotalUCI=NA,Total.se=NA,Total.cv=NA)
+ stratapred=expand.grid(strata=unique(newdatall$strata),Total=0,TotalVar=0,Total.mean=0,TotalLCI=NA,TotalUCI=NA,Total.se=NA,Total.cv=NA)
  stratapred$Year=newdatall$Year[match(stratapred$strata,newdatall$strata)]
  for(i in 1:length(years)) {
   newdat = newdatall[newdatall$Year==years[i],]
@@ -818,8 +859,13 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
   yearpredyear$Total<-yeartotal$Total
   yearpred[i,c("Total.mean", "TotalVar", "TotalLCI", "TotalUCI", "Total.se" ,"Total.cv", "Total")]<-
    yearpredyear[1,c("Total.mean", "TotalVar", "TotalLCI", "TotalUCI", "Total.se" ,"Total.cv", "Total")]
-  stratapred[stratapred$Year==years[i],c("strata","Total.mean", "TotalVar", "TotalLCI", "TotalUCI", "Total.se" ,"Total.cv", "Total")]<-
-   stratapredyear[,c("strata","Total.mean", "TotalVar", "TotalLCI", "TotalUCI", "Total.se" ,"Total.cv", "Total")]
+  if(nrow(stratapredyear)>1) #If there are more than one strata in a year
+    stratapred[stratapred$Year==years[i],c("strata","Total.mean", "TotalVar", "TotalLCI", "TotalUCI", "Total.se" ,"Total.cv", "Total")]<-
+     stratapredyear[,c("strata","Total.mean", "TotalVar", "TotalLCI", "TotalUCI", "Total.se" ,"Total.cv", "Total")]  
+  if(nrow(stratapredyear)==1) #If there may be more than one year in a stratum (e.g. multiyear data)
+    stratapred[stratapred$strata==stratapredyear$strata[1],c("Total.mean", "TotalVar","Total")]<-
+     stratapred[stratapred$strata==stratapredyear$strata[1],c("Total.mean", "TotalVar","Total")] +
+     stratapredyear[,c("Total.mean", "TotalVar", "Total")]  
   }
  }  
  if(is.na(max(yearpred$Total.cv)) | max(yearpred$Total.cv,na.rm=TRUE)>10) {
@@ -859,7 +905,8 @@ simulateTMBTweedieDraw<-function(modfit,nObs,b,Effort) {
 
 #Function to plot either total positive trips (binomial) or total catch/bycatch (all other models)
 plotSums<-function(yearpred,modType,fileName,subtext="") {
-  if(is.numeric(yearpred$Year)) yearpred$Year[yearpred$Source!="Ratio"]=yearpred$Year[yearpred$Source!="Ratio"]+startYear
+  if(is.numeric(yearpred$Year) & "Year" %in% allVarNames) 
+    yearpred$Year[yearpred$Source!="Ratio"]=yearpred$Year[yearpred$Source!="Ratio"]+startYear
   if(!is.null(yearpred)) {
     if(modType=="Binomial") ytitle=paste0(common[run]," ","predicted total positive trips") else
       ytitle=paste0("Total",common[run]," ",catchType[run]," (",catchUnit[run],")")
@@ -892,7 +939,7 @@ plotSums<-function(yearpred,modType,fileName,subtext="") {
 
 #Function to plot abundance index plus minus standard error
 plotIndex<-function(yearpred,modType,fileName,subtext="") {
-  if(is.numeric(yearpred$Year)) yearpred$Year=yearpred$Year+startYear
+  if(is.numeric(yearpred$Year) & "Year" %in% allVarNames) yearpred$Year=yearpred$Year+startYear
   if(!is.null(yearpred)) {
     if(modType=="Binomial") ytitle=paste0(common[run]," ","Positive trip index") else
       ytitle=paste0("Index ", common[run]," ",catchType[run]," (",catchUnit[run],")")
@@ -1011,7 +1058,7 @@ ResidualsFunc<-function(modfit1,modType,fileName=NULL,nsim=250) {
 
 #Function to plot total catch by all models plus a validation number 
 plotSumsValidate<-function(yearpred,trueval,fileName,colName) {
-  if(is.numeric(yearpred$Year)) yearpred$Year[yearpred$Source!="Ratio"]=yearpred$Year[yearpred$Source!="Ratio"]+startYear
+  if(is.numeric(yearpred$Year)& "Year" %in% allVarNames) yearpred$Year[yearpred$Source!="Ratio"]=yearpred$Year[yearpred$Source!="Ratio"]+startYear
   yearpred<-yearpred %>% 
       mutate(Year=as.numeric(as.character(Year)),ymin=Total-Total.se,ymax=Total+Total.se) %>%
       mutate(ymin=ifelse(ymin>0,ymin,0))
@@ -1366,7 +1413,7 @@ makePredictionsNoVar<-function(modfit1,modfit2=NULL,modtype,newdat,obsdatval=NUL
       summarize(Total=sum(Total,na.rm=TRUE)) %>%
       mutate(Total.mean=NA,TotalVar=NA,	TotalLCI=NA,	TotalUCI=NA,	Total.se=NA,
         Total.cv=NA)
-    yearpred<-stratapred%>% group_by(Year) %>%
+    yearpred<-allpred%>% group_by(Year) %>%
       summarize(Total=sum(Total,na.rm=TRUE)) %>%
       mutate(Total.mean=NA,TotalVar=NA,	TotalLCI=NA,	TotalUCI=NA,	Total.se=NA,
         Total.cv=NA)

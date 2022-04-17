@@ -1,5 +1,5 @@
 # Effort must be in the same units in both data sets (e.g. hook hours), but it does not matter
-# how the logbook effort data is aggregated, as long has it includes data on all stratification or 
+# how the logbook effort data is aggregated, as long as it includes data on all stratification or 
 # predictor variables. For example, the data can be aggregated by year, East-West and season if those
 # are the stratification variables, or it can be aggregated by trip.
 # The user must specify the names of the databases and the variables to include in the 
@@ -7,8 +7,9 @@
 # Contact Beth Babcock ebabcock@rsmas.miami.edu for assistance. 
 
 ############### Step 1. Enter the data specification in the file named here #############################
+#specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/BycatchModelSpecificationLLSIM.TRIP2022April17.r"
 specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationExample.r"
-# Either set the working directory or put the full patch in the filename.
+# Either set the working directory or put the full path in the filename.
 # Complete the information in the file before continuing. You may run through specFile line by line, but it 
 # will also be sourced again later. The file will be saved, with the addition of the date, to the output directory
 
@@ -25,16 +26,16 @@ source(paste0(baseDir,"/4.preliminarySetup.r"))
 #There is also a .csv for each species. 
 
 ############## This is the main analysis loop ##########################
-StartTime<-Sys.time()   
+StartTime<-Sys.time()
 for(run in 1:numSp) {
  datval<-dat[[run]]
  outVal<-dirname[[run]]
  varExclude<-NULL
  #Fit all models except delta
  for(mod in which(!modelTry %in% c("Delta-Lognormal","Delta-Gamma"))){
-   modfit1<-findBestModelFunc(datval,modelTry[mod],printOutput=TRUE)
-   modelSelectTable[[run]][[modelTry[mod]]]<-modfit1[[2]]
-   modFits[[run]][[modelTry[mod]]]<-modfit1[[1]]
+   modFit<-findBestModelFunc(datval,modelTry[mod],printOutput=TRUE)
+   modelSelectTable[[run]][[modelTry[mod]]]<-modFit[[2]]
+   modFits[[run]][[modelTry[mod]]]<-modFit[[1]]
  }
 #Fit delta models
  if("Delta-Lognormal" %in% modelTry | "Delta-Gamma" %in% modelTry) {  #Delta models if requested
@@ -42,11 +43,11 @@ for(run in 1:numSp) {
    y<-unlist(lapply(posdat[,factorNames],function(x) length(setdiff(levels(x),x)))) #See if all levels are included
    varExclude<-names(y)[y>0]
    if(length(varExclude>0)) print(paste(common[run], "excluding variable",varExclude,"from delta models for positive catch"))
-   if((min(summary(posdat$Year))>0 |  is.numeric(datval$Year)) &!is.null(modFits[[run]][["Binomial"]])) { #If all years have at least one positive observation and binomial converged, carry on with delta models
+   if((min(summary(posdat$Year))>0 |  is.numeric(datval$Year)) & !is.null(modFits[[run]][["Binomial"]])) { #If all years have at least one positive observation and binomial converged, carry on with delta models
      for(mod in which(modelTry %in% c("Delta-Lognormal","Delta-Gamma")))  {
-       modfit1<-findBestModelFunc(posdat,modelTry[mod],printOutput=TRUE)
-       modelSelectTable[[run]][[modelTry[mod]]]<-modfit1[[2]]
-       modFits[[run]][[modelTry[mod]]]<-modfit1[[1]]
+       modFit<-findBestModelFunc(posdat,modelTry[mod],printOutput=TRUE)
+       modelSelectTable[[run]][[modelTry[mod]]]<-modFit[[2]]
+       modFits[[run]][[modelTry[mod]]]<-modFit[[1]]
      }
    } else {
      print("Not all years have positive observations, skipping delta models")
@@ -59,33 +60,33 @@ for(run in 1:numSp) {
  for(mod in 1:length(modelTry)) {
    if(!is.null(modFits[[run]][[modelTry[mod]]])) {
      if(modelTry[mod] %in% c("Delta-Lognormal","Delta-Gamma")) {
-        modfit1<-modFits[[run]][["Binomial"]]
-        modfit2<-modFits[[run]][[modelTry[mod]]]
+        modFit1<-modFits[[run]][["Binomial"]]
+        modFit2<-modFits[[run]][[modelTry[mod]]]
      } else {
-        modfit1<-modFits[[run]][[modelTry[mod]]]
-        modfit2<-NULL
+        modFit1<-modFits[[run]][[modelTry[mod]]]
+        modFit2<-NULL
      }
      if(EstimateBycatch) {
       if(VarCalc=="Simulate" |(VarCalc=="DeltaMethod" & modelTry[mod] %in% c("Delta-Lognormal","Delta-Gamma"))) 
          if(BigData)
            modPredVals[[run]][[modelTry[mod]]]<-
-            makePredictionsSimVarBig(modfit1=modfit1,modfit2=modfit2,
+            makePredictionsSimVarBig(modfit1=modFit1,modfit2=modFit2,
             modtype=modelTry[mod],newdat=logdat,obsdatval=datval) else
            modPredVals[[run]][[modelTry[mod]]]<-
-            makePredictionsSimVar(modfit1=modfit1,modfit2=modfit2,
+            makePredictionsSimVar(modfit1=modFit1,modfit2=modFit2,
             modtype=modelTry[mod],newdat=logdat,obsdatval=datval)   
       if(VarCalc=="DeltaMethod" & !modelTry[mod] %in% c("Delta-Lognormal","Delta-Gamma")) 
            modPredVals[[run]][[modelTry[mod]]]<-
-            makePredictionsDeltaVar(modfit1=modfit1,
+            makePredictionsDeltaVar(modfit1=modFit1,
             modtype=modelTry[mod],newdat=logdat,obsdatval=datval) 
       if(VarCalc=="None") {
          modPredVals[[run]][[modelTry[mod]]]<-
-            makePredictionsNoVar(modfit1=modfit1,modfit2=modfit2,
+            makePredictionsNoVar(modfit1=modFit1,modfit2=modFit2,
             modtype=modelTry[mod],newdat=logdat,obsdatval=datval)
       }
      }
      if(EstimateIndex) {
-      modIndexVals[[run]][[modelTry[mod]]]<-makeIndexVar(modfit1=modfit1,modfit2=modfit2,modType=modelTry[mod],printOutput=TRUE)   
+      modIndexVals[[run]][[modelTry[mod]]]<-makeIndexVar(modfit1=modFit1,modfit2=modFit2,modType=modelTry[mod],printOutput=TRUE)   
      }
      modelTable[[run]]$formula[mod]<-
        paste(formula(modFits[[run]][[modelTry[mod]]]))[[3]]
@@ -103,7 +104,8 @@ for(run in 1:numSp) {
   if(EstimateBycatch) {
    yearsumgraph<-yearSum[[run]] %>% dplyr::select(Year=Year,Total=Cat,Total.se=Cse) %>%
      mutate(TotalVar=Total.se^2,Total.cv=Total.se/Total,
-        Total.mean=NA,TotalLCI=Total-1.96*Total.se,TotalUCI=Total+1.96*Total.se)
+        Total.mean=NA,TotalLCI=Total-1.96*Total.se,TotalUCI=Total+1.96*Total.se) %>%
+     mutate(TotalLCI=ifelse(TotalLCI<0,0,TotalLCI))
    if(is.factor(modPredVals[[run]][[1]]$Year)) yearsumgraph$Year<-factor(yearsumgraph$Year)
    allmods[[run]]<-bind_rows(c(modPredVals[[run]],list(Ratio=yearsumgraph)),.id="Source") %>%
      filter(!Source=="Binomial")
@@ -134,15 +136,15 @@ for(run in 1:numSp) {
    datout$SampleUnits<-rep(1,dim(datout)[1])
    for(mod in which(!modelTry %in% c("Delta-Lognormal","Delta-Gamma"))) {
      if(modelFail[run,modelTry[mod]]=="-") {
-       if(DredgeCrossValidation) modfit1<-findBestModelFunc(datin,modelTry[mod])[[1]] else
-        modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),
+       if(DredgeCrossValidation) modFit1<-findBestModelFunc(datin,modelTry[mod])[[1]] else
+        modFit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),
            modType=modelTry[mod],obsdatval=datin)
        if(modelTry[mod]!="Binomial") {
-        predcpue<-makePredictions(modfit1,modType=modelTry[mod], newdat = datout)
+        predcpue<-makePredictions(modFit1,modType=modelTry[mod], newdat = datout)
         rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
         metab[[run]][i,modelTry[mod]]<-getME(predcpue$est.cpue,datout$cpue)
        } else {
-        bin1<-modfit1    
+        bin1<-modFit1    
        }
      }
    }
@@ -150,8 +152,8 @@ for(run in 1:numSp) {
      posdat<-filter(datin,pres==1)
      for(mod in which(modelTry %in% c("Delta-Lognormal","Delta-Gamma"))) {
        if(modelFail[run,modelTry[mod]]=="-" & !(!is.numeric(posdat$Year) & min(table(posdat$Year))==0)) {
-         if(DredgeCrossValidation) modfit1<-findBestModelFunc(posdat,modelTry[mod])[[1]] else
-          modfit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),modType=modelTry[mod],obsdatval=posdat)
+         if(DredgeCrossValidation) modFit1<-findBestModelFunc(posdat,modelTry[mod])[[1]] else
+          modFit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),modType=modelTry[mod],obsdatval=posdat)
          predcpue<-makePredictions(bin1,modfit1,modelTry[mod],datout)
          rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
          metab[[run]][i,modelTry[mod]]<-getME(predcpue$est.cpue,datout$cpue)
@@ -189,7 +191,8 @@ save(list=c("numSp","yearSum","runName","runDescription",
   file=paste0(outVal,"/","resultsR"))
 rmarkdown::render("6.PrintResults.rmd",
    params=list(outVal=outVal))
-file.rename(paste0(getwd(),"/6.PrintResults.pdf"),paste0(outVal,"/",common[run],catchType[run],"results.pdf"))
+file.rename(paste0(getwd(),"/6.PrintResults.pdf"),paste0(outVal,"/",
+  common[run],catchType[run],"results.pdf"))
 print(paste(run, common[run],"complete, ",Sys.time()))
 }
 ###################### End of analysis loop #######################

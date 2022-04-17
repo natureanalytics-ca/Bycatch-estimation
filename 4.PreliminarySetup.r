@@ -3,7 +3,6 @@
 library(tidyverse)
 library(ggplot2)
 library(MASS)
-library(lme4)
 library(cplm)
 library(DHARMa)
 library(quantreg)
@@ -30,6 +29,8 @@ if(("Delta-Lognormal" %in% modelTry |"Delta-Gamma" %in% modelTry) & !"Binomial" 
   modelTry<-c("Binomial",modelTry)
 
 # Set up variables
+#if("Year" %in% names(obsdat) & !yearVar=="Year") obsdat<-obsdat %>% rename(oldYear=Year)
+#if("Year" %in% names(logdat) & !yearVar=="Year") logdat<-logdat %>% rename(oldYear=Year)
 obsdat<-obsdat %>%   ungroup() %>%
   rename(Year=!!yearVar)
 logdat<-logdat %>%  ungroup() %>%
@@ -73,7 +74,7 @@ if(length(requiredVarNames)>1) {
 } else {
  logdat$strata <- pull(logdat,var=requiredVarNames)
 }
-if(max(tapply(logdat$SampleUnits,logdat$strata,sum))>20000) {
+if(max(tapply(logdat$SampleUnits,logdat$strata,sum))>100000) {
   print("Cannot calculate variance for large number of logbook sample units")
   VarCalc<-"None"
 }  
@@ -92,7 +93,7 @@ for(i in 1:length(temp)) {
   }
 
 #Subtract first year if numeric to improve convergence
-if(is.numeric(obsdat$Year)) {
+if(is.numeric(obsdat$Year) & "Year" %in% allVarNames) {
  startYear<-min(obsdat$Year)
  obsdat$Year<-obsdat$Year-startYear
  logdat$Year<-logdat$Year-startYear
@@ -135,6 +136,7 @@ foreach(run= 1:numSp) %do%  {
   if(!dir.exists(dirname[[run]])) dir.create(dirname[[run]])
   if(includeObsCatch) tempvars<-c(allVarNames,"Effort","Catch","matchColumn") else
     tempvars<-c(allVarNames,"Effort","Catch")
+  if(!"Year" %in%  tempvars) tempvars<-c("Year",tempvars)
   dat[[run]]<-obsdat %>%
     rename(Catch=!!obsCatch[run])%>%
     dplyr::select_at(all_of(tempvars)) %>%
