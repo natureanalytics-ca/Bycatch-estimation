@@ -4,6 +4,7 @@ library(gridExtra)
 library(parallel)
 library(foreach)
 library(doParallel)
+setwd("~/Box Sync/bycatch project (ebabcock@miami.edu)/LLSim")
 source("3.BycatchFunctions.r")
 theme_set(theme_bw())
 
@@ -46,20 +47,21 @@ llsets$trip1<-llsets$trip
 a<-which(x>100)
 length(a)
 NumCores<-detectCores()
-cl<-makeCluster(NumCores-2)
-registerDoParallel(cl)
+cl2<-makeCluster(NumCores-2)
+registerDoParallel(cl2)
 foreach(i = a)  %do% {
   b=which(llsets$trip %in% names(x)[i])
   d=trunc((-1+1:length(b))/20)
   llsets$trip[b]=paste(llsets$trip[b],d,sep=".")    
 }
-stopCluster(cl)
+stopCluster(cl2)
 trips<-unique(llsets$trip)
 x<-table(llsets$trip)
 summary(as.vector(x))
 length(x)
 ggplot(data.frame(x),aes(x=Freq))+geom_histogram()
-#Plot checkes that trips are reasonable 
+#Plot checks that trips are reasonable 
+length(unique(llsets$trip))
 
 ## Make subsets for observer coverage
 #Observer coverage, 5%, 10%, 20%, random by trip and by set
@@ -67,14 +69,14 @@ ggplot(data.frame(x),aes(x=Freq))+geom_histogram()
 trip<-sort(unique(llsets$trip))
 n<-length(trip)
 trip.05=sample(trip,size=n*0.05,replace=FALSE)
-trip.10=sample(trip,size=n*0.10,replace=FALSE)
-trip.20=sample(trip,size=n*0.20,replace=FALSE)
-trip.75=sample(trip,size=n*0.75,replace=FALSE)
+#trip.10=sample(trip,size=n*0.10,replace=FALSE)
+#trip.20=sample(trip,size=n*0.20,replace=FALSE)
+#trip.75=sample(trip,size=n*0.75,replace=FALSE)
 
 llsets$trip.05=ifelse(llsets$trip %in% trip.05,1,0)
-llsets$trip.10=ifelse(llsets$trip %in% trip.10,1,0)
-llsets$trip.20=ifelse(llsets$trip %in% trip.20,1,0)
-llsets$trip.75=ifelse(llsets$trip %in% trip.75,1,0)
+#llsets$trip.10=ifelse(llsets$trip %in% trip.10,1,0)
+#llsets$trip.20=ifelse(llsets$trip %in% trip.20,1,0)
+#llsets$trip.75=ifelse(llsets$trip %in% trip.75,1,0)
 
 #Generate trip by trip observer dataset, at 5% coverage
 obstrip<-filter(llsets,trip.05==1) %>% 
@@ -186,8 +188,8 @@ logyearsum
 #Print out files 
 write.csv(obstrip,"obstrip05.csv")  #Trip by trip observer with 5% effort
 write.csv(logtrip,"logtrip05.csv")  #By trip logbook
-write.csv(obsset,"obstrip05.csv")  #By set observer
-write.csv(logset,"logtrip05.csv")  #By set logbook
+write.csv(obsset,"obsset05.csv")  #By set observer
+write.csv(logset,"logset05.csv")  #By set logbook
 write.csv(logsetAgg,"logsetAgg05.csv")  #By set logbook, aggregated by x variables to reduce size
 write.csv(logyearsum,"TotalAnnualCatches.csv")
 
