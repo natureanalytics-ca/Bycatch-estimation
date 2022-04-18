@@ -296,6 +296,7 @@ getSimDeltaLN<-function(modfitBin,modfitLnorm, df1, nsim=10000) {
 findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
   offset=NULL
   keepVars=requiredVarNames
+  TMBfamily=NULL
   if(modType %in% c("NegBin","TMBnbinom1","TMBnbinom2"))     
     obsdatval$y=round(obsdatval$Catch)
   if(modType %in% c("Tweedie","TMBtweedie","Normal")) 
