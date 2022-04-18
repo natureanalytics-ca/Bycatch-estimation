@@ -127,10 +127,8 @@ dirname<-list()
 dat<-list()
 #Loop through all species and print data summary. Note that records with NA in either catch or effort are excluded automatically
 yearSum<-list()
-if(NumCores>3 & numSp>1)  {
-  cl<-makeCluster(NumCores-2)
-  registerDoParallel(cl)
-}
+cl2<-makeCluster(NumCores-2)
+registerDoParallel(cl2)
 foreach(run= 1:numSp) %do%  {
   dirname[[run]]<-paste0(outDir,"/",common[run]," ",catchType[run],"/")
   if(!dir.exists(dirname[[run]])) dir.create(dirname[[run]])
@@ -168,7 +166,7 @@ foreach(run= 1:numSp) %do%  {
   } 
   write.csv(yearSum[[run]],paste0(dirname[[run]],common[run],catchType[run],"DataSummary.csv"))
 }
-if(NumCores>3 & numSp>1) stopCluster(cl)
+stopCluster(cl2)
 save(list=c("numSp","yearSum","runName", "common", "sp"),file=paste0(outDir,"\\","sumdatR"))
 rmarkdown::render("5.PrintDataSummary.rmd",
   params=list(OutDir=OutDir),
@@ -191,4 +189,10 @@ for(run in 1:numSp) {
  modFits[[run]]<- modPredVals[[run]]
  modelSelectTable[[run]]<- modPredVals[[run]]
 }
+#For MuMIn
+extras=c("AICc","AIC", "BIC")
+cl2<-makeCluster(NumCores-2)
+clusterEvalQ(cl2, {library(glmmTMB)
+                   library(cplm)    
+                   library(MASS)} )
 

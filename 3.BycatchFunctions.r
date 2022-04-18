@@ -294,9 +294,8 @@ getSimDeltaLN<-function(modfitBin,modfitLnorm, df1, nsim=10000) {
 
 #Function to find best model by information criteria, by model type
 findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
-  keepVars=requiredVarNames
   offset=NULL
-  extras=c("AICc","AIC", "BIC")
+  keepVars=requiredVarNames
   if(modType %in% c("NegBin","TMBnbinom1","TMBnbinom2"))     
     obsdatval$y=round(obsdatval$Catch)
   if(modType %in% c("Tweedie","TMBtweedie","Normal")) 
@@ -385,15 +384,13 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
     if(modType %in% c("TMBnbinom1","TMBnbinom2","TMBtweedie") ) 
       modfit1<-glmmTMB(formula(modfit1),family=TMBfamily,data=obsdatval,na.action=na.fail)
    if(useParallel) {
-      cl2<-makeCluster(NumCores-2)
-      clusterEvalQ(cl2, {library(glmmTMB)
-                        library(cplm)    
-                        library(MASS)} )
-      clusterExport(cl2,
-        list("obsdatval","modfit1","keepVars","extras","selectCriteria"),
-        envir=environment())
+     clusterExport(cl2,c("obsdatval","modfit1","keepVars","extras","TMBfamily","offset"),envir=environment())
+     assign("modfit1",modfit1,envir=globalenv())
+     assign("obsdatval",obsdatval,envir=globalenv())
+     assign("TMBfamily",TMBfamily,envir=globalenv())
+     assign("offset",offset,envir=globalenv())
+     assign("keepVars",keepVars,envir=globalenv())
      modfit2<-dredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras,cluster=cl2)
-     stopCluster(cl2)
    } else {
      modfit2<-try(dredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras))
    }

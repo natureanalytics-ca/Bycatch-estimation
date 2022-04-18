@@ -93,7 +93,7 @@ selectCriteria<-"BIC"
 #or unbalanced dataset. DredgeCrossValidation specifies whether to use information criteria 
 #to find the best model in cross validation, using the dredge function, or just keep the same model formula. 
 #Do not use dredge for very large datasets, as the run will be slow.  
-DoCrossValidation<-FALSE
+DoCrossValidation<-TRUE
 DredgeCrossValidation<-FALSE
 
 #Specify whether to exclude models that fail the DHARMa residuals test. 
@@ -111,7 +111,7 @@ VarCalc<-c("Simulate","DeltaMethod","None")[1]
 # don't have space on your disk. Also specify whether to use parallel processing to
 # speed up calculations.
 saveR<-TRUE
-useParallel<-FALSE
+useParallel<-TRUE
 
 ## Validation. If you have true values of the total bycatch (for example in a simulation study)
 # Make PlotValidation true and fill out the rest of the specification. 

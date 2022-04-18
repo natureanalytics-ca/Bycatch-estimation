@@ -161,7 +161,7 @@ for(run in 1:numSp) {
      }
    }
   }
- if(NumCores>3) stopCluster(cl)
+ if(NumCores>3 & useParallel) stopCluster(cl)
 # Calculate RMSE and ME
  modelTable[[run]]$RMSE[modelTable[[run]]$model!="Binomial"]<-apply(rmsetab[[run]],2,mean,na.rm=TRUE)
  modelTable[[run]]$ME[modelTable[[run]]$model!="Binomial"]<-apply(metab[[run]],2,mean,na.rm=TRUE)
