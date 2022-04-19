@@ -154,7 +154,7 @@ for(run in 1:numSp) {
        if(modelFail[run,modelTry[mod]]=="-" & !(!is.numeric(posdat$Year) & min(table(posdat$Year))==0)) {
          if(DredgeCrossValidation) modFit1<-findBestModelFunc(posdat,modelTry[mod])[[1]] else
           modFit1<-FitModelFuncCV(formula(paste0("y~",modelTable[[run]]$formula[mod])),modType=modelTry[mod],obsdatval=posdat)
-         predcpue<-makePredictions(bin1,modfit1,modelTry[mod],datout)
+         predcpue<-makePredictions(bin1,modFit1,modelTry[mod],datout)
          rmsetab[[run]][i,modelTry[mod]]<-getRMSE(predcpue$est.cpue,datout$cpue)
          metab[[run]][i,modelTry[mod]]<-getME(predcpue$est.cpue,datout$cpue)
        }
