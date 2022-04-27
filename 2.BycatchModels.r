@@ -7,7 +7,7 @@
 # Contact Beth Babcock ebabcock@rsmas.miami.edu for assistance. 
 
 ############### Step 1. Enter the data specification in the file named here #############################
-specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/BycatchModelSpecificationLLSIM.TRIP2022April17.r"
+specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationexample.r"
 #specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationExample.r"
 # Either set the working directory or put the full path in the filename.
 # Complete the information in the file before continuing. You may run through specFile line by line, but it 
@@ -123,14 +123,10 @@ for(run in 1:numSp) {
  rmsetab[[run]]<-matrix(NA,10,length(modelTry),dimnames=list(1:10,modelTry))
  rmsetab[[run]]<-rmsetab[[run]][,colnames(rmsetab[[run]])!="Binomial"]
  metab[[run]]<-rmsetab[[run]]
- if(DoCrossValidation & length(which(modelFail[run,colnames(modelFail)!="Binomial"]=="-"))>0) {  #Don't do unless at least one model worked
-  if(NumCores>3 & useParallel)  {
-    cl<-makeCluster(NumCores-2)
-    registerDoParallel(cl)
-  }
+ if(DoCrossValidation & length(which(modelFail[run,colnames(modelFail)!="Binomial"]=="-"))>1) {  #Don't do unless at least one model worked
   datval$cvsample<-sample(rep(1:10,length=dim(datval)[1]),replace=FALSE)
   table(datval$cvsample,datval$Year)
-  foreach(i=1:10 ) %do% {
+  for(i in 1:10 ) {
    datin<-datval[datval$cvsample!=i,]
    datout<-datval[datval$cvsample==i,]
    datout$SampleUnits<-rep(1,dim(datout)[1])
@@ -161,7 +157,6 @@ for(run in 1:numSp) {
      }
    }
   }
- if(NumCores>3 & useParallel) stopCluster(cl)
 # Calculate RMSE and ME
  modelTable[[run]]$RMSE[modelTable[[run]]$model!="Binomial"]<-apply(rmsetab[[run]],2,mean,na.rm=TRUE)
  modelTable[[run]]$ME[modelTable[[run]]$model!="Binomial"]<-apply(metab[[run]],2,mean,na.rm=TRUE)
