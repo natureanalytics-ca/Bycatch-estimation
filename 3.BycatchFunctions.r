@@ -386,12 +386,12 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
       modfit1<-glmmTMB(formula(modfit1),family=TMBfamily,data=obsdatval,na.action=na.fail)
    if(useParallel) {
      clusterExport(cl2,c("obsdatval","modfit1","keepVars","extras","TMBfamily","offset"),envir=environment())
-     assign("modfit1",modfit1,envir=globalenv())
-     assign("obsdatval",obsdatval,envir=globalenv())
-     assign("TMBfamily",TMBfamily,envir=globalenv())
-     assign("offset",offset,envir=globalenv())
-     assign("keepVars",keepVars,envir=globalenv())
-     modfit2<-dredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras,cluster=cl2)
+#     assign("modfit1",modfit1,envir=globalenv())
+#     assign("obsdatval",obsdatval,envir=globalenv())
+#     assign("TMBfamily",TMBfamily,envir=globalenv())
+#     assign("offset",offset,envir=globalenv())
+#     assign("keepVars",keepVars,envir=globalenv())
+     modfit2<-MuMIn:::.dredge.par(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras,cluster=cl2)
    } else {
      modfit2<-try(dredge(modfit1,rank=selectCriteria,fixed=keepVars,extra=extras))
    }
