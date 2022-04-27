@@ -9,6 +9,9 @@ source("3.BycatchFunctions.r")
 theme_set(theme_bw())
 
 llsets<-read.csv("catchbyset.csv",as.is=TRUE)
+
+llsets<-read.csv("~/Box Sync/bycatch project (ebabcock@miami.edu)/LLSim/catchbyset.csv",as.is=TRUE)
+
 dim(llsets)
 summary(llsets)
 table(llsets$year,llsets$month)

@@ -2,8 +2,8 @@
 # This will automatically be saved in the output directory as documentation.
 
 #Specify directory where R files are found. 
-baseDir<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code"
-setwd(baseDir)
+baseDir<-getwd()
+#setwd(baseDir)
 
 #Give a name to the run, which will be used to set up a directory for the the outputs
 #and a run description to describe the run in the output files
