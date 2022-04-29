@@ -193,3 +193,37 @@ write.csv(logset,"logset05.csv")  #By set logbook
 write.csv(logsetAgg,"logsetAgg05.csv")  #By set logbook, aggregated by x variables to reduce size
 write.csv(logyearsum,"TotalAnnualCatches.csv")
 
+##################OBserver effect bias
+
+## Set up sampling probability proportional to catch of BUM (observer effect bias)
+tripSummary<- llsets %>% group_by(trip) %>%
+  summarize(BUM=sum(c.BUM),SWO=sum(c.SWO,hooks=sum(hooks),sets=n()))
+head(tripSummary)
+
+#Generate probability of being sampled from BUM catch
+#p1 is the desired mean coverage and p2 is the minimum
+#probability of being sampled, x is the catch
+func1<-function(p1,p2,x) {
+  m=mean(x)
+  M=max(x)
+  b=(log(p1/(1-p1))-log(p2/(1-p2)))/(m-M)
+  a=log(p1/(1-p1))-b*m  
+  plot(seq(0,M,.1),1/(1+exp(-(a+b*seq(0,M,.1)))),xlab="Catch",ylab="Probability of observation",type="l")
+  1/(1+exp(-(a+b*x)))
+}
+
+# Randomly sample trips based on BUM catch, observer effect bias
+tripSummary$sample1<-rbinom(nrow(tripSummary),1,func1(0.05,.01,tripSummary$BUM))
+llsets$sample1<-ifelse(llsets$trip%in% tripSummary$sample1[tripSummary$sample1==1],1,0)
+#Fraction of trips sampled
+sum(tripSummary$sample1)/nrow(tripSummary)
+#Fraction of sets sampled
+sum(llsets$sample1)/nrow(llsets)
+
+# Check that relationship between catch and P(sampling) exists
+glm1<-glm(sample1~BUM,data=tripSummary,family="binomial")
+summary(glm1)
+
+## Probability of detection increasing with SWO catch
+x<-func1(0.05,.1,tripSummary$SWO)
+
