@@ -1,4 +1,3 @@
-# !diagnostics off  
 
 # Basic ratio estimator with variance (Cochran)
 # x, y and g are vectors giving the effort/catch, bycatch and stratum of 
@@ -297,6 +296,7 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
   offset=NULL
   keepVars=requiredVarNames
   TMBfamily=NULL
+  selectCriteria=selectCriteria
   if(modType %in% c("NegBin","TMBnbinom1","TMBnbinom2"))     
     obsdatval$y=round(obsdatval$Catch)
   if(modType %in% c("Tweedie","TMBtweedie","Normal")) 
@@ -385,7 +385,8 @@ findBestModelFunc<-function(obsdatval,modType,printOutput=FALSE) {
     if(modType %in% c("TMBnbinom1","TMBnbinom2","TMBtweedie") ) 
       modfit1<-glmmTMB(formula(modfit1),family=TMBfamily,data=obsdatval,na.action=na.fail)
    if(useParallel) {
-     clusterExport(cl2,c("obsdatval","modfit1","keepVars","extras","TMBfamily","offset"),envir=environment())
+     clusterEvalQ(cl2, {rm(list=ls())} )
+     clusterExport(cl2,c("obsdatval","modfit1","keepVars","extras","TMBfamily","offset","selectCriteria"),envir=environment())
 #     assign("modfit1",modfit1,envir=globalenv())
 #     assign("obsdatval",obsdatval,envir=globalenv())
 #     assign("TMBfamily",TMBfamily,envir=globalenv())
@@ -442,7 +443,7 @@ makePredictions<-function(modfit1,modfit2=NULL,modType,newdat,obsdatval=NULL) {
     }
     if(modType =="Gamma") {
       allpred<-cbind(newdat,predval1)   %>% 
-        mutate(est.cpue=fit-0.01) 
+        mutate(est.cpue=fit-0.1) 
     }
     if(modType =="Tweedie") {  
       allpred<-data.frame(est.cpue=predict(modfit1,newdata=newdat,type="response"))  
@@ -460,7 +461,7 @@ makePredictions<-function(modfit1,modfit2=NULL,modType,newdat,obsdatval=NULL) {
 }
 
 ## Function to get an abundance index with SE, Does not yet have year interactions as random effects
-makeIndexVar<-function(modfit1,modfit2=NULL,modType,obsdatval,newdat=newDat,printOutput=FALSE,nsims=nSims) {
+makeIndexVar<-function(modfit1,modfit2=NULL,modType,newdat=indexDat,printOutput=FALSE,nsims=nSims) {
     returnval=NULL
     if(!is.null(modfit1)) {
     response1<-data.frame(predict(modfit1,newdata=newdat,type="response",se.fit=TRUE))
@@ -629,13 +630,13 @@ if(!any(is.na(response1$se.fit)) & !max(response1$se.fit/response1$fit,na.rm=TRU
        sim=replicate(nsim, simulateTMBTweedieDraw(modfit1,nObs,a,newdat$Effort) )
   }
     if(includeObsCatch & modtype!="Binomial") { 
-      d=match(logdat$matchColumn,obsdatval$matchColumn)
+      d=match(allpred$matchColumn,obsdatval$matchColumn)
       d=d[!is.na(d)]
       allpred$Total[d]= allpred$Total[d] + obsdatval$Catch
       sim[d,]= sim[d,] + obsdatval$Catch
     }
     if(includeObsCatch & modtype=="Binomial") { 
-      d=match(logdat$matchColumn,obsdatval$matchColumn)
+      d=match(allpred$matchColumn,obsdatval$matchColumn)
       d=d[!is.na(d)]
       allpred$Total[d]= obsdatval$pres
       sim[d,]= obsdatval$pres
@@ -812,14 +813,14 @@ makePredictionsSimVarBig<-function(modfit1,modfit2=NULL,newdat, modtype,  nsim=n
   }
     if(includeObsCatch & modtype!="Binomial") { 
       obsdatvalyear=obsdatval[obsdatval$Year==years[i],]
-      d=match(logdat$matchColumn,obsdatvalyear$matchColumn)
+      d=match(allpred$matchColumn,obsdatvalyear$matchColumn)
       d=d[!is.na(d)]
       allpred$Total[d]= allpred$Total[d] + obsdatvalyear$Catch
       sim[d,]= sim[d,] + obsdatvalyear$Catch
     }
     if(includeObsCatch & modtype=="Binomial") { 
       obsdatvalyear=obsdatval[obsdatval$Year==years[i],]
-      d=match(logdat$matchColumn,obsdatvalyear$matchColumn)
+      d=match(allpred$matchColumn,obsdatvalyear$matchColumn)
       d=d[!is.na(d)]
       allpred$Total[d]= obsdatvalyear$pres
       sim[d,]= obsdatvalyear$pres
@@ -1168,6 +1169,14 @@ FitModelFuncCV<-function(formula1,modType,obsdatval) {
     obsdatval$y=obsdatval$pres
     modfit1<-try(glm(formula1,data=obsdatval,family="binomial",control=list(epsilon = 1e-6,maxit=1000)))
   }
+  if(modType=="Normal") {
+     obsdatval$y=obsdatval$cpue
+    modfit1<-try(lm(formula1,data=obsdatval))
+  }
+  if(modType=="Lognormal") {
+     obsdatval$y=log(obsdatval$cpue+0.1)
+     modfit1<-try(lm(formula1,data=obsdatval))
+  }
   if(modType=="Delta-Lognormal") {
     obsdatval$y=obsdatval$log.cpue
     obsdatval=obsdatval[obsdatval$cpue>0,]
@@ -1282,13 +1291,13 @@ makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE,obs
   }
     if(includeObsCatch & modtype!="Binomial") { 
       obsdatvalyear=obsdatval[obsdatval$Year==years[i],]
-      d=match(logdat$matchColumn,obsdatvalyear$matchColumn)
+      d=match(allpred$matchColumn,obsdatvalyear$matchColumn)
       d=a[!is.na(d)]
       allpred$Total[a]= allpred$Total[d] + obsdatvalyear$Catch
     }
     if(includeObsCatch & modtype=="Binomial") { 
       obsdatvalyear=obsdatval[obsdatval$Year==years[i],]
-      d=match(logdat$matchColumn,obsdatvalyear$matchColumn)
+      d=match(allpred$matchColumn,obsdatvalyear$matchColumn)
       d=d[!is.na(d)]
       allpred$Total[d]= obsdatvalyear$pres
     }
@@ -1298,8 +1307,8 @@ makePredictionsDeltaVar<-function(modfit1,newdat, modtype,  printOutput=TRUE,obs
   if(length(requiredVarNames)>1 )  {
    strata=unique(newdat$strata)
    for(j in 1:length(strata)) {
-      stratapred$Total[stratpred$Year==years[i]][j] = sum(predval[newdat$strata==strata[j]])
-      stratapred$TotalVarl[stratpred$Year==years[i]][j] = t(deriv[newdat$strata==strata[j]]) %*%
+      stratapred$Total[stratapred$Year==years[i]][j] = sum(predval[newdat$strata==strata[j]])
+      stratapred$TotalVarl[stratapred$Year==years[i]][j] = t(deriv[newdat$strata==strata[j]]) %*%
         vcovval[newdat$strata==strata[j],newdat$strata==strata[j]] %*%
         deriv[newdat$strata==strata[j]] + sum(residvar[newdat$strata==strata[j]])
    }
@@ -1397,12 +1406,12 @@ makePredictionsNoVar<-function(modfit1,modfit2=NULL,modtype,newdat,obsdatval=NUL
         mutate(Total=Effort*fit)
     }
     if(includeObsCatch & modtype!="Binomial") { 
-      a=match(logdat$matchColumn,obsdatval$matchColumn)
+       a=match(allpred$matchColumn,obsdatval$matchColumn)
       a=a[!is.na(a)]
       allpred$Total[a]= allpred$Total[a] + obsdatval$Catch
     }
     if(includeObsCatch & modtype=="Binomial") { 
-      a=match(logdat$matchColumn,obsdatval$matchColumn)
+      a=match(allpred$matchColumn,obsdatval$matchColumn)
       a=a[!is.na(a)]
       allpred$Total[a]= obsdatval$pres
     }

@@ -21,11 +21,13 @@ EstimateBycatch<-TRUE
 #### Read in the observer data file. This could also be an assignment to an
 # R object if you have already got the data in R.
 obsdat<-read.csv("obstrip05.csv")
+obsdat<-obsdat[obsdat$Year>=1990,]
 
 #### Specify name of file with total effort data, if you are estimating total bycatch. 
 # It can be aggregated or may include one line per sample unit (trip). 
 # If estimateByatch is FALSE, this variable is not needed
 logdat<-read.csv("logtrip05.csv")
+logdat<-logdat[logdat$Year>=1990,]
 
 ### What is the sample unit in this data set? e.g. sets or trips. 
 sampleUnit<-"trips" #Usually trips, may be sets
@@ -83,7 +85,8 @@ factorNames=c("Year","fleet","area","season")
 #"Tweedie" for Tweedie GLM from the cpglm library, and "TMBnbinom1", "TMBnbinom2", and "TMBtweedie" for
 # negative binomial 1, negative binomial 2 and Tweedie from the GLMMTMB library. Binomial is run
 #automatically as part of the delta models if either of them are selected.
-modelTry<-c("Delta-Lognormal","Delta-Gamma","TMBnbinom1","TMBnbinom2","TMBtweedie")
+modelTry<-c("Lognormal","Delta-Lognormal","Delta-Gamma","TMBnbinom1","TMBnbinom2","TMBtweedie")
+#modelTry<-c("TMBnbinom1")
 
 #Specify preferred information criteria for model selection
 # Choices are AICc, AIC and BIC. 
@@ -117,5 +120,6 @@ useParallel<-FALSE
 # Make PlotValidation true and fill out the rest of the specification
 plotValidation<-TRUE
 trueVals<-read.csv("C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/totalAnnualCatches.csv")
+trueVals<-trueVals[trueVals$Year>=1990,]
 trueCols<-"Total.BUM"
 

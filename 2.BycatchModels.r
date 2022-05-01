@@ -7,8 +7,8 @@
 # Contact Beth Babcock ebabcock@rsmas.miami.edu for assistance. 
 
 ############### Step 1. Enter the data specification in the file named here #############################
-specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationexample.r"
-#specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationExample.r"
+#specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/1.BycatchModelSpecificationexample.r"
+specFile<-"C:/Users/ebabcock/Box Sync/bycatch project (ebabcock@miami.edu)/Current R code/BycatchModelSpecificationLLSIM.TRIP2022April17.r"
 # Either set the working directory or put the full path in the filename.
 # Complete the information in the file before continuing. You may run through specFile line by line, but it 
 # will also be sourced again later. The file will be saved, with the addition of the date, to the output directory
@@ -86,7 +86,7 @@ for(run in 1:numSp) {
       }
      }
      if(EstimateIndex) {
-      modIndexVals[[run]][[modelTry[mod]]]<-makeIndexVar(modfit1=modFit1,modfit2=modFit2,modType=modelTry[mod],printOutput=TRUE)   
+      modIndexVals[[run]][[modelTry[mod]]]<-makeIndexVar(modfit1=modFit1,modfit2=modFit2,newdat=indexDat,modType=modelTry[mod],printOutput=TRUE)   
      }
      modelTable[[run]]$formula[mod]<-
        paste(formula(modFits[[run]][[modelTry[mod]]]))[[3]]
