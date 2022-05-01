@@ -79,16 +79,16 @@ if(max(tapply(logdat$SampleUnits,logdat$strata,sum))>100000) {
   VarCalc<-"None"
 }  
 
-#newDat for making index
-newDat<-distinct_at(obsdat,vars(all_of(indexVarNames)),.keep_all=TRUE) %>%
+#IndexDat for making index
+indexDat<-distinct_at(obsdat,vars(all_of(indexVarNames)),.keep_all=TRUE) %>%
  arrange(Year) %>%
  mutate(Effort=1)
 temp<-allVarNames[allVarNames != "Year"]
 for(i in 1:length(temp)) {
   if(!temp[i] %in% indexVarNames) {
    if(is.numeric(pull(obsdat,!!temp[i])))
-    newDat[,temp[i]]<-median(pull(obsdat,!!temp[i]),na.rm=TRUE) else
-    newDat[,temp[i]]<-mostfreqfunc(obsdat[,temp[i]]) 
+    indexDat[,temp[i]]<-median(pull(obsdat,!!temp[i]),na.rm=TRUE) else
+    indexDat[,temp[i]]<-mostfreqfunc(obsdat[,temp[i]]) 
    } 
   }
 
@@ -97,7 +97,7 @@ if(is.numeric(obsdat$Year) & "Year" %in% allVarNames) {
  startYear<-min(obsdat$Year)
  obsdat$Year<-obsdat$Year-startYear
  logdat$Year<-logdat$Year-startYear
- newDat$Year<-newDat$Year-startYear
+ indexDat$Year<-indexDat$Year-startYear
 } else startYear<-min(as.numeric(as.character(obsdat$Year)))
 
 #Set up directory for output

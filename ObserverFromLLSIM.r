@@ -33,7 +33,8 @@ llsets$lat5<-trunc(llsets$lat/5)*5
 llsets$lon5<-trunc(llsets$lon/5)*5
 table(llsets$lon5,llsets$lat5)
 
-llsets$trip<-paste(llsets$gear,llsets$year,llsets$month,llsets$fleet,llsets$lat5,llsets$lon5,sep=".")
+llsets$trip<-paste(llsets$gear,llsets$year,llsets$month,
+  llsets$fleet,llsets$lat5,llsets$lon5,sep=".")
 trips<-unique(llsets$trip)
 length(trips)  
 x<-table(llsets$trip)
